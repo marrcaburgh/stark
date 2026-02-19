@@ -1,0 +1,65 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "base",
+      "displayName": "Base Configuration",
+      "description": "Common settings for all builds",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "displayName": "Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -fsanitize=address,undefined",
+        "BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "release-base",
+      "inherits": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_FLAGS_RELEASE": "-O3 -march=native -DNDEBUG"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "release-base",
+      "displayName": "Release",
+      "cacheVariables": {
+        "BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "release-no-tests",
+      "inherits": "release-base",
+      "displayName": "ReleaseNoTests",
+      "cacheVariables": {
+        "BUILD_TESTS": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "release", "configurePreset": "release" },
+    { "name" : "release-no-tests", "configurePreset": "release-no-tests" }
+  ],
+  "workflowPresets": [
+    {
+      "name": "develop",
+      "steps": [
+        { "type": "configure", "name": "debug" },
+        { "type": "build", "name": "debug" }
+      ]
+    }
+  ]
+}
+

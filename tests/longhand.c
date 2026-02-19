@@ -5,12 +5,12 @@ int main() {
   const char *argv[] = {
     "./app/path",
     "--boolean",
-    "--string", "a_str",
+    "--string=a_str",
     "--integer", "1",
     "--long", "1234567890l",
     "--float", "1.234567",
     "--double", "1.234567",
-    "--callback"
+    "--action"
   };
   // clang-format on
 

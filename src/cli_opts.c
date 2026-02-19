@@ -100,12 +100,12 @@ void cli_opts_init(struct cli_opts *const app, struct cli_opt *const opts,
                    const char *const desc) {
   if (app == NULL) {
     cli_opts_error("app is NULL");
-    exit(EXIT_FAILURE);
+    abort();
   }
 
   if (opts == NULL) {
     cli_opts_error("opts is NULL");
-    exit(EXIT_FAILURE);
+    abort();
   }
 
   if (!cli_opts_verify(opts)) {

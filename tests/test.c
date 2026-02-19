@@ -10,13 +10,13 @@ double d = 0.0;
 FILE *file;
 
 void action(void *ctx) { printf("action\n"); }
-bool custom(const char *str, void *ctx) { return b; }
+bool validate(const char *str, void *ctx) {}
 
 CLI_OPTS(opts,
          // clang-format off
       CLI_OPT('b', "boolean", CLI_OPT_TYPE_BOOL, &b, "a flag/boolean"),
       CLI_OPT('s', "string", CLI_OPT_TYPE_STR, &str, "a string"),
-      CLI_OPT('i', "integer", CLI_OPT_TYPE_INT, &i, "an integer"),
+      CLI_OPT('i', "integer", CLI_OPT_TYPE_INT, &i, "an integer", .validate = validate),
       CLI_OPT('l', "long", CLI_OPT_TYPE_LONG, &l, "a long"),
       CLI_OPT('f', "float", CLI_OPT_TYPE_FLOAT, &f, "a float"),
       CLI_OPT('d', "double", CLI_OPT_TYPE_DBL, &d, "a double"),
