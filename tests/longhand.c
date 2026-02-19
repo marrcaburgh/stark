@@ -17,6 +17,12 @@ int main() {
   struct cli_opts app;
 
   cli_opts_init(&app, opts, "Longhand test");
-  cli_opts_parse(&app, ARRAY_LENGTH(argv), argv);
+
+  if (!cli_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
+    return 2;
+  }
+
   test_print();
+
+  return 0;
 }

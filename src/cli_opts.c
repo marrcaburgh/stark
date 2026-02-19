@@ -39,17 +39,17 @@ static bool cli_opt_require(const struct cli_opt *const opt, void *const ptr) {
 static bool cli_opts_verify(const struct cli_opt *const opts) {
   bool ok = true;
 
-  for (const struct cli_opt *o = opts; o->type != CLI_OPT_TYPE_END; o++) {
+  for (const struct cli_opt *o = opts; o->type != CLI_OPT_END; o++) {
     switch (o->type) {
-    case CLI_OPT_TYPE_END:
-    case CLI_OPT_TYPE_HELP:
+    case CLI_OPT_END:
+    case CLI_OPT_HELP:
     case CLI_OPT_TYPE_ACTION:
-    case CLI_OPT_TYPE_STRING:
-    case CLI_OPT_TYPE_DOUBLE:
+    case CLI_OPT_TYPE_STR:
+    case CLI_OPT_TYPE_DBL:
     case CLI_OPT_TYPE_FLOAT:
     case CLI_OPT_TYPE_LONG:
-    case CLI_OPT_TYPE_INTEGER:
-    case CLI_OPT_TYPE_BOOLEAN:
+    case CLI_OPT_TYPE_INT:
+    case CLI_OPT_TYPE_BOOL:
       break;
     default:
       cli_opts_error("invalid cli_opt_type '%d'", o->type);
@@ -63,11 +63,14 @@ static bool cli_opts_verify(const struct cli_opt *const opts) {
 
     switch (o->type) {
     case CLI_OPT_TYPE_ACTION:
+      if (o->validate || o->parser) {
+        cli_opts_error("validators/parsers cannot be paired with actions");
+      }
       if (!cli_opt_require(o, o->action)) {
         ok = false;
       }
       break;
-    case CLI_OPT_TYPE_HELP:
+    case CLI_OPT_HELP:
       break;
     default:
       if (!cli_opt_require(o, o->dest)) {
@@ -75,7 +78,7 @@ static bool cli_opts_verify(const struct cli_opt *const opts) {
       }
     }
 
-    for (const struct cli_opt *next = o + 1; next->type != CLI_OPT_TYPE_END;
+    for (const struct cli_opt *next = o + 1; next->type != CLI_OPT_END;
          next++) {
       if (o->shorthand && o->shorthand == next->shorthand) {
         cli_opts_error("duplicate shorthand '-%c'", o->shorthand);
@@ -125,13 +128,13 @@ static void cli_opts_help(struct cli_opts *app) {
 static bool cli_opt_assign(struct cli_opts *const app,
                            const struct cli_opt *const opt) {
   switch (opt->type) {
-  case CLI_OPT_TYPE_HELP:
+  case CLI_OPT_HELP:
     cli_opts_help(app);
     break;
   case CLI_OPT_TYPE_ACTION:
     opt->action(opt->ctx);
     break;
-  case CLI_OPT_TYPE_BOOLEAN:
+  case CLI_OPT_TYPE_BOOL:
     *(bool *)opt->dest = !*(bool *)opt->dest;
     break;
   default: {
@@ -149,16 +152,25 @@ static bool cli_opt_assign(struct cli_opts *const app,
       return false;
     }
 
-    char *endptr;
+    if (opt->validate != NULL && !opt->validate(str, opt->ctx)) {
+      return false;
+    }
+
+    if (opt->parser != NULL) {
+      return opt->parser(str, opt->dest);
+    }
+
+    char *endptr = NULL;
     union {
       long l;
       double d;
     } val;
+    errno = 0;
 
-    if (opt->type == CLI_OPT_TYPE_INTEGER || opt->type == CLI_OPT_TYPE_LONG) {
+    if (opt->type == CLI_OPT_TYPE_INT || opt->type == CLI_OPT_TYPE_LONG) {
       val.l = strtol(str, &endptr, 10);
     } else if (opt->type == CLI_OPT_TYPE_FLOAT ||
-               opt->type == CLI_OPT_TYPE_DOUBLE) {
+               opt->type == CLI_OPT_TYPE_DBL) {
       val.d = strtod(str, &endptr);
     }
 
@@ -171,10 +183,10 @@ static bool cli_opt_assign(struct cli_opts *const app,
     }
 
     switch (opt->type) {
-    case CLI_OPT_TYPE_STRING:
+    case CLI_OPT_TYPE_STR:
       *(const char **)opt->dest = str;
       break;
-    case CLI_OPT_TYPE_INTEGER:
+    case CLI_OPT_TYPE_INT:
       if (val.l > INT_MAX || val.l < INT_MIN) {
         cli_opts_error("integer value out of range '%s'", str);
         return false;
@@ -187,7 +199,7 @@ static bool cli_opt_assign(struct cli_opts *const app,
     case CLI_OPT_TYPE_FLOAT:
       *(float *)opt->dest = (float)val.d;
       break;
-    case CLI_OPT_TYPE_DOUBLE:
+    case CLI_OPT_TYPE_DBL:
       *(double *)opt->dest = val.d;
       break;
     default:
@@ -199,47 +211,52 @@ static bool cli_opt_assign(struct cli_opts *const app,
   return true;
 }
 
-static bool cli_opts_match_long(struct cli_opts *const app) {
+static int cli_opts_match_long(struct cli_opts *const app) {
   const char *eq = strchr(app->token, '=');
-
   size_t key_len = eq != NULL ? (size_t)(eq - app->token) : strlen(app->token);
 
-  for (const struct cli_opt *o = app->opts; o->type != CLI_OPT_TYPE_END; o++) {
-    if (o->longhand != NULL && strlen(o->longhand) == key_len &&
-        strncmp(o->longhand, app->token, key_len) == 0) {
+  for (const struct cli_opt *o = app->opts; o->type != CLI_OPT_END; o++) {
+    if ((o->longhand != NULL && strlen(o->longhand) == key_len &&
+         strncmp(o->longhand, app->token, key_len) == 0) ||
+        (o->alias != NULL && strlen(o->alias) == key_len &&
+         strncmp(o->alias, app->token, key_len) == 0)) {
       app->token = eq != NULL ? (eq + 1) : NULL;
 
-      return cli_opt_assign(app, o);
+      if (!cli_opt_assign(app, o)) {
+        return 1;
+      }
+
+      return 0;
     }
   }
 
-  return false;
+  return 2;
 }
 
 static int cli_opts_match_short(struct cli_opts *const app) {
+  const struct cli_opt *o;
+
   while (app->token != NULL && *app->token != '\0') {
-    for (const struct cli_opt *o = app->opts; o->type != CLI_OPT_TYPE_END;
-         o++) {
-      if (o->shorthand == *app->token) {
-        app->token = (app->token[1] != '\0') ? (app->token + 1) : NULL;
-
-        if (!cli_opt_assign(app, o)) {
-          return false;
-        }
-
-        if (app->token == NULL) {
-          return true;
-        }
-
-        break;
+    for (o = app->opts; o->shorthand != *app->token; o++) {
+      if (o->type == CLI_OPT_END) {
+        return 2;
       }
+    }
+    app->token = (app->token[1] != '\0') ? (app->token + 1) : NULL;
+
+    if (!cli_opt_assign(app, o)) {
+      return 1;
+    }
+
+    if (app->token == NULL) {
+      break;
     }
   }
 
-  return false;
+  return 0;
 }
 
-void cli_opts_parse(struct cli_opts *const app, const int argc,
+bool cli_opts_parse(struct cli_opts *const app, const int argc,
                     const char **const argv) {
   app->argc = argc - 1;
   app->argv = argv + 1;
@@ -259,7 +276,12 @@ void cli_opts_parse(struct cli_opts *const app, const int argc,
     if (arg[1] != '-') {
       app->token = arg + 1;
 
-      if (!cli_opts_match_short(app)) {
+      switch (cli_opts_match_short(app)) {
+      case 0:
+        break;
+      case 1:
+        return false;
+      case 2:
         goto unknown;
       }
 
@@ -269,13 +291,18 @@ void cli_opts_parse(struct cli_opts *const app, const int argc,
     // longhand option
     if (arg[2] == '\0') {
       app->argc--;
-      app->argc++;
+      app->argv++;
       break;
     }
 
     app->token = arg + 2;
 
-    if (!cli_opts_match_long(app)) {
+    switch (cli_opts_match_long(app)) {
+    case 0:
+      break;
+    case 1:
+      return false;
+    case 2:
       goto unknown;
     }
 
@@ -283,5 +310,8 @@ void cli_opts_parse(struct cli_opts *const app, const int argc,
 
   unknown:
     printf("unknown option: %s\n", arg);
+    return false;
   }
+
+  return true;
 }
