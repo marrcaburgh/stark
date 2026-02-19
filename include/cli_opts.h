@@ -11,7 +11,7 @@ extern "C" {
 
 typedef void (*cli_opt_action)(void *ctx);
 typedef bool (*cli_opt_validate)(const char *str, void *ctx);
-typedef bool (*cli_opt_parser)(const char *str, void *dest);
+typedef bool (*cli_opt_converter)(const char *str, void *dest);
 
 enum cli_opt_type {
   /* regular types */
@@ -47,7 +47,7 @@ typedef struct cli_opt {
   void *const ctx;
   const cli_opt_action action;
   const cli_opt_validate validate;
-  const cli_opt_parser parser;
+  const cli_opt_converter converter;
 } cli_opt;
 
 typedef struct cli_opts {

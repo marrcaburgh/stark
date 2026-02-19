@@ -43,6 +43,7 @@ static bool cli_opts_verify(const struct cli_opt *const opts) {
     switch (o->type) {
     case CLI_OPT_END:
     case CLI_OPT_HELP:
+    case CLI_OPT_TYPE_CUSTOM:
     case CLI_OPT_TYPE_ACTION:
     case CLI_OPT_TYPE_STR:
     case CLI_OPT_TYPE_DBL:
@@ -63,7 +64,7 @@ static bool cli_opts_verify(const struct cli_opt *const opts) {
 
     switch (o->type) {
     case CLI_OPT_TYPE_ACTION:
-      if (o->validate || o->parser) {
+      if (o->validate || o->converter) {
         cli_opts_error("validators/parsers cannot be paired with actions");
       }
       if (!cli_opt_require(o, o->action)) {
@@ -156,8 +157,8 @@ static bool cli_opt_assign(struct cli_opts *const app,
       return false;
     }
 
-    if (opt->parser != NULL) {
-      return opt->parser(str, opt->dest);
+    if (opt->converter != NULL) {
+      return opt->converter(str, opt->dest);
     }
 
     char *endptr = NULL;
@@ -242,6 +243,7 @@ static int cli_opts_match_short(struct cli_opts *const app) {
         return 2;
       }
     }
+
     app->token = (app->token[1] != '\0') ? (app->token + 1) : NULL;
 
     if (!cli_opt_assign(app, o)) {
@@ -272,7 +274,6 @@ bool cli_opts_parse(struct cli_opts *const app, const int argc,
       continue;
     }
 
-    // shorthand option
     if (arg[1] != '-') {
       app->token = arg + 1;
 
@@ -288,7 +289,6 @@ bool cli_opts_parse(struct cli_opts *const app, const int argc,
       continue;
     }
 
-    // longhand option
     if (arg[2] == '\0') {
       app->argc--;
       app->argv++;
