@@ -149,7 +149,7 @@ static bool cli_opt_assign(struct cli_opts *const app,
       app->argv++;
       str = *app->argv;
     } else {
-      cli_opts_error("no value '%s'", *app->argv);
+      fprintf(stderr, "no value provided: '%s'", *app->argv);
       return false;
     }
 
@@ -176,10 +176,10 @@ static bool cli_opt_assign(struct cli_opts *const app,
     }
 
     if (endptr == str) {
-      cli_opts_error("value not a number '%s'", str);
+      fprintf(stderr, "not a number: '%s'", str);
       return false;
     } else if (errno == ERANGE) {
-      cli_opts_error("value out of range '%s'", str);
+      fprintf(stderr, "out of range: '%s'", str);
       return false;
     }
 
@@ -189,7 +189,7 @@ static bool cli_opt_assign(struct cli_opts *const app,
       break;
     case CLI_OPT_TYPE_INT:
       if (val.l > INT_MAX || val.l < INT_MIN) {
-        cli_opts_error("integer value out of range '%s'", str);
+        fprintf(stderr, "integer out of range: '%s'", str);
         return false;
       }
       *(int *)opt->dest = (int)val.l;
@@ -309,7 +309,7 @@ bool cli_opts_parse(struct cli_opts *const app, const int argc,
     continue;
 
   unknown:
-    printf("unknown option: %s\n", arg);
+    fprintf(stderr, "unknown option: %s\n", arg);
     return false;
   }
 
