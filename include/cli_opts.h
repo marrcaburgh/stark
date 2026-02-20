@@ -79,7 +79,7 @@ typedef struct cli_opts {
     .type = CLI_OPT_END                                                        \
   }
 
-void cli_opts_init(struct cli_opts *const app, struct cli_opt *const opts,
+bool cli_opts_init(struct cli_opts *const app, struct cli_opt *const opts,
                    const char *const desc);
 bool cli_opts_parse(struct cli_opts *const app, const int argc,
                     const char **const argv);

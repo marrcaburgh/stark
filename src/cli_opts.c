@@ -96,26 +96,28 @@ static bool cli_opts_verify(const struct cli_opt *const opts) {
   return ok;
 }
 
-void cli_opts_init(struct cli_opts *const app, struct cli_opt *const opts,
+bool cli_opts_init(struct cli_opts *const app, struct cli_opt *const opts,
                    const char *const desc) {
   if (app == NULL) {
     cli_opts_error("app is NULL");
-    abort();
+    return false;
   }
 
   if (opts == NULL) {
     cli_opts_error("opts is NULL");
-    abort();
+    return false;
   }
 
   if (!cli_opts_verify(opts)) {
-    exit(EXIT_FAILURE);
+    return false;
   }
 
   memset(app, 0, sizeof(*app));
 
   app->opts = opts;
   app->desc = desc;
+
+  return true;
 }
 
 static void cli_opts_usage(const struct cli_opt *const opt) {

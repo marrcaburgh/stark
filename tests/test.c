@@ -10,14 +10,14 @@ double d = 0.0;
 FILE *file;
 
 void callback(void *ctx) { printf("action\n"); }
-bool validate(const char *str, void *ctx) {}
+bool validate(const char *str, void *ctx) { return false; }
 
 struct cli_opt opts[] = {
     // clang-format off
     CLI_OPT_LIST(
       CLI_OPT('b', "boolean", CLI_OPT_TYPE_BOOL, &b, "a flag/boolean"),
       CLI_OPT('s', "string", CLI_OPT_TYPE_STR, &str, "a string"),
-      CLI_OPT('i', "integer", CLI_OPT_TYPE_INT, &i, "an integer", .validator = validate),
+      CLI_OPT('i', "integer", CLI_OPT_TYPE_INT, &i, "an integer"),
       CLI_OPT('l', "long", CLI_OPT_TYPE_LONG, &l, "a long"),
       CLI_OPT('f', "float", CLI_OPT_TYPE_FLOAT, &f, "a float"),
       CLI_OPT('d', "double", CLI_OPT_TYPE_DBL, &d, "a double")

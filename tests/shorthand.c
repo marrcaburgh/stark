@@ -1,4 +1,5 @@
 #include "test.h"
+#include <stdio.h>
 
 int main() {
   // clang-format off
@@ -16,7 +17,9 @@ int main() {
 
   struct cli_opts app;
 
-  cli_opts_init(&app, opts, "An app description");
+  if (!cli_opts_init(&app, opts, "An app description")) {
+    return 1;
+  }
 
   if (!cli_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
     return 1;
