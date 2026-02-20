@@ -12,8 +12,9 @@ FILE *file;
 void action(void *ctx) { printf("action\n"); }
 bool validate(const char *str, void *ctx) {}
 
-CLI_OPTS(opts,
-         // clang-format off
+struct cli_opt opts[] = {
+    // clang-format off
+    CLI_OPT_LIST(
       CLI_OPT('b', "boolean", CLI_OPT_TYPE_BOOL, &b, "a flag/boolean"),
       CLI_OPT('s', "string", CLI_OPT_TYPE_STR, &str, "a string"),
       CLI_OPT('i', "integer", CLI_OPT_TYPE_INT, &i, "an integer", .validate = validate),
@@ -21,8 +22,9 @@ CLI_OPTS(opts,
       CLI_OPT('f', "float", CLI_OPT_TYPE_FLOAT, &f, "a float"),
       CLI_OPT('d', "double", CLI_OPT_TYPE_DBL, &d, "a double"),
       CLI_OPT_ACTION('a', "action", action, NULL, "an action flag")
-         // clang-format on
-);
+      )
+    // clang-format on
+};
 
 void test_print() {
   printf("b = %d\n", b);

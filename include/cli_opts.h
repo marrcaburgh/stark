@@ -74,20 +74,10 @@ typedef struct cli_opts {
    .ctx = context,                                                             \
    .help = hlp}
 
-#if __STDC_VERSION__ >= 201112L
-#define CLI_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
-#else
-#define CLI_STATIC_ASSERT(cond, msg)                                           \
-  typedef char static_assertion_##__LINE__[(cond) ? 1 : -1]
-#endif
-
-#define CLI_OPTS(name, ...)                                                    \
-  struct cli_opt name[] = {                                                    \
-      __VA_ARGS__,                                                             \
-      CLI_OPT('h', "help", CLI_OPT_HELP, NULL, "prints this help"),            \
-      {.type = CLI_OPT_END}};                                                  \
-  CLI_STATIC_ASSERT((sizeof((struct cli_opt[]){__VA_ARGS__}) > 0),             \
-                    "cli_opts error: options list cannot be empty")
+#define CLI_OPT_LIST(...)                                                      \
+  __VA_ARGS__, CLI_OPT('h', "help", CLI_OPT_HELP, NULL, "prints this help"), { \
+    .type = CLI_OPT_END                                                        \
+  }
 
 void cli_opts_init(struct cli_opts *const app, struct cli_opt *const opts,
                    const char *const desc);
