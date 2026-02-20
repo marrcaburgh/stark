@@ -9,7 +9,7 @@ float f = 0.0f;
 double d = 0.0;
 FILE *file;
 
-void action(void *ctx) { printf("action\n"); }
+void callback(void *ctx) { printf("action\n"); }
 bool validate(const char *str, void *ctx) {}
 
 struct cli_opt opts[] = {
@@ -17,11 +17,10 @@ struct cli_opt opts[] = {
     CLI_OPT_LIST(
       CLI_OPT('b', "boolean", CLI_OPT_TYPE_BOOL, &b, "a flag/boolean"),
       CLI_OPT('s', "string", CLI_OPT_TYPE_STR, &str, "a string"),
-      CLI_OPT('i', "integer", CLI_OPT_TYPE_INT, &i, "an integer", .validate = validate),
+      CLI_OPT('i', "integer", CLI_OPT_TYPE_INT, &i, "an integer", .validator = validate),
       CLI_OPT('l', "long", CLI_OPT_TYPE_LONG, &l, "a long"),
       CLI_OPT('f', "float", CLI_OPT_TYPE_FLOAT, &f, "a float"),
-      CLI_OPT('d', "double", CLI_OPT_TYPE_DBL, &d, "a double"),
-      CLI_OPT_ACTION('a', "action", action, NULL, "an action flag")
+      CLI_OPT('d', "double", CLI_OPT_TYPE_DBL, &d, "a double")
       )
     // clang-format on
 };

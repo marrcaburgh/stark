@@ -9,9 +9,9 @@
 extern "C" {
 #endif
 
-typedef void (*cli_opt_action)(void *ctx);
-typedef bool (*cli_opt_validate)(const char *str, void *ctx);
-typedef bool (*cli_opt_converter)(const char *str, void *dest);
+typedef void (*cli_opt_callback)(void *ctx);
+typedef bool (*cli_opt_validator)(const char *str, void *ctx);
+typedef bool (*cli_opt_assigner)(const char *str, void *dest);
 
 enum cli_opt_type {
   /* regular types */
@@ -45,9 +45,9 @@ typedef struct cli_opt {
   const char shorthand;
   const char *help;
   void *const ctx;
-  const cli_opt_action action;
-  const cli_opt_validate validate;
-  const cli_opt_converter converter;
+  const cli_opt_callback callback;
+  const cli_opt_validator validator;
+  const cli_opt_assigner assign;
 } cli_opt;
 
 typedef struct cli_opts {
@@ -66,7 +66,7 @@ typedef struct cli_opts {
    .help = hlp,                                                                \
    ##__VA_ARGS__}
 
-#define CLI_OPT_ACTION(sh, lh, act, context, hlp)                              \
+#define CLI_OPT_CALLBACK(sh, lh, act, context, hlp)                            \
   {.shorthand = sh,                                                            \
    .longhand = lh,                                                             \
    .type = CLI_OPT_TYPE_ACTION,                                                \

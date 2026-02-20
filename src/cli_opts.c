@@ -64,10 +64,10 @@ static bool cli_opts_verify(const struct cli_opt *const opts) {
 
     switch (o->type) {
     case CLI_OPT_TYPE_ACTION:
-      if (o->validate || o->converter) {
+      if (o->validator || o->assign) {
         cli_opts_error("validators/parsers cannot be paired with actions");
       }
-      if (!cli_opt_require(o, o->action)) {
+      if (!cli_opt_require(o, o->callback)) {
         ok = false;
       }
       break;
@@ -133,7 +133,7 @@ static bool cli_opt_assign(struct cli_opts *const app,
     cli_opts_help(app);
     break;
   case CLI_OPT_TYPE_ACTION:
-    opt->action(opt->ctx);
+    opt->callback(opt->ctx);
     break;
   case CLI_OPT_TYPE_BOOL:
     *(bool *)opt->dest = !*(bool *)opt->dest;
@@ -141,7 +141,7 @@ static bool cli_opt_assign(struct cli_opts *const app,
   default: {
     const char *str;
 
-    if (app->token && *app->token != '\0') {
+    if (app->token != NULL && *app->token != '\0') {
       str = app->token;
       app->token = NULL;
     } else if (app->argc > 1) {
@@ -153,12 +153,12 @@ static bool cli_opt_assign(struct cli_opts *const app,
       return false;
     }
 
-    if (opt->validate != NULL && !opt->validate(str, opt->ctx)) {
+    if (opt->validator != NULL && !opt->validator(str, opt->ctx)) {
       return false;
     }
 
-    if (opt->converter != NULL) {
-      return opt->converter(str, opt->dest);
+    if (opt->assign != NULL) {
+      return opt->assign(str, opt->dest);
     }
 
     char *endptr = NULL;
@@ -192,6 +192,7 @@ static bool cli_opt_assign(struct cli_opts *const app,
         fprintf(stderr, "integer out of range: '%s'", str);
         return false;
       }
+
       *(int *)opt->dest = (int)val.l;
       break;
     case CLI_OPT_TYPE_LONG:
