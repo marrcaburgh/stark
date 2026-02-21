@@ -10,6 +10,40 @@
 extern "C" {
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define MB_ALIGN64 __attribute__((aligned(64)))
+#define likely(x) __builtin_expect(!!(x), 1)
+#define MB_COLD __attribute__((cold))
+#elif defined(_MSC_VER)
+#define MB_ALIGN64 __declspec(align(64))
+#else
+#define MB_ALIGN64
+#define MB_COLD
+#endif
+
+#define MB_OPT(sh, lh, typ, dst, hlp, ...)                                     \
+  {.shorthand = sh,                                                            \
+   .longhand = lh,                                                             \
+   .type = typ,                                                                \
+   .help = hlp,                                                                \
+   .dest = dst,                                                                \
+   ##__VA_ARGS__}
+
+#define MB_OPT_CALLBACK(sh, lh, callback, context, hlp)                        \
+  {.shorthand = sh,                                                            \
+   .longhand = lh,                                                             \
+   .type = MB_OPT_CALLBACK,                                                    \
+   .handler.cb = callback,                                                     \
+   .ctx = context,                                                             \
+   .help = hlp}
+
+#define MB_OPT_LIST(...)                                                       \
+  __VA_ARGS__, MB_OPT('h', "help", MB_OPT_HELP, NULL, "prints this help"), {   \
+    .type = MB_OPT_END                                                         \
+  }
+
+#define mb_opts_init(opts_ptr) likely(_mb_opts_init(opts_ptr))
+
 typedef void (*mb_opts_callback)(const void *const ctx);
 typedef bool (*mb_opts_validator)(const char *const val, const void *const ctx);
 typedef bool (*mb_opts_assigner)(const char *const str, void *const dest);
@@ -37,52 +71,32 @@ enum mb_opts_type {
 };
 
 typedef struct mb_opt {
-  enum mb_opts_type type;
-  const char shorthand;
-  const char *const longhand;
-  const char *const alias;
-  void *const dest;
-  const mb_opts_assigner assign;
-  const uint16_t elem_size;
-  const void *const ctx;
+  uint16_t type;            // 2 bytes
+  const char shorthand;     // 1 byte
+  const uint16_t elem_size; // 2 bytes
+  uint8_t lens;
+  const char *const longhand;    // 8 bytes
+  const char *const alias;       // 8 bytes
+  void *const dest;              // 8 bytes
+  const mb_opts_assigner assign; // 8 bytes
+  const void *const ctx;         // 8 bytes
   union {
     const mb_opts_callback cb;
     const mb_opts_validator valid;
-  } handler;
-  const char *const help;
-} mb_opt;
+  } handler;              // 8 bytes
+  const char *const help; // 8 bytes
+} mb_opt;                 // fits into one CPU L1 cache line or 64b
 
 typedef struct mb_opts {
-  const char *token;
-  const struct mb_opt *opts;
-  const char **argv;
-  int argc;
+  const char *_token;
+  const struct mb_opt *const opts;
+  const char **_argv;
+  int _argc;
   const char *desc;
+  bool verified;
 } mb_opts;
 
-#define MB_OPT(sh, lh, typ, dst, hlp, ...)                                     \
-  {.shorthand = sh,                                                            \
-   .longhand = lh,                                                             \
-   .type = typ,                                                                \
-   .help = hlp,                                                                \
-   .dest = dst,                                                                \
-   ##__VA_ARGS__}
-
-#define MB_OPT_CALLBACK(sh, lh, callback, context, hlp)                        \
-  {.shorthand = sh,                                                            \
-   .longhand = lh,                                                             \
-   .type = MB_OPT_CALLBACK,                                                    \
-   .handler.cb = callback,                                                     \
-   .ctx = context,                                                             \
-   .help = hlp}
-
-#define MB_OPT_LIST(...)                                                       \
-  __VA_ARGS__, MB_OPT('h', "help", MB_OPT_HELP, NULL, "prints this help"), {   \
-    .type = MB_OPT_END                                                         \
-  }
-
-bool mb_opts_init(struct mb_opts *const app, struct mb_opt *const opts,
-                  const char *const desc);
+bool _mb_opts_init(mb_opts *const app);
 bool mb_opts_parse(struct mb_opts *const app, const int argc,
                    const char **const argv);
 

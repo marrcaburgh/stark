@@ -10,15 +10,16 @@ int main() {
     "--long", "1234567890l",
     "--float", "1.234567",
     "--double", "1.234567",
-    "--action"
+    "--callback"
   };
   // clang-format on
 
-  struct cli_opts app;
+  struct mb_opts app = {.opts = opts, .desc = "longhand test"};
+  if (!mb_opts_init(&app)) {
+    return 1;
+  }
 
-  cli_opts_init(&app, opts, "Longhand test");
-
-  if (!cli_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
+  if (!mb_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
     return 2;
   }
 

@@ -1,10 +1,9 @@
 #include "test.h"
 
 int main(const int argc, const char *argv[]) {
-  struct cli_opts app;
-  cli_opts_init(&app, opts, "An app description");
+  struct mb_opts app = {.opts = opts, .desc = "cli test"};
 
-  if (!cli_opts_parse(&app, argc, argv)) {
+  if (!mb_opts_parse(&app, argc, argv)) {
     return 1;
   }
   test_print();

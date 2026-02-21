@@ -1,5 +1,4 @@
 #include "test.h"
-#include <stdio.h>
 
 int main() {
   // clang-format off
@@ -11,18 +10,18 @@ int main() {
     "-l", "1234567890",
     "-f", "1.234567",
     "-d1.234567",
-    "-a"
+    "-c"
   };
   // clang-format on
 
-  struct cli_opts app;
+  struct mb_opts app = {.opts = opts, .desc = "shorthand test"};
 
-  if (!cli_opts_init(&app, opts, "An app description")) {
+  if (!mb_opts_init(&app)) {
     return 1;
   }
 
-  if (!cli_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
-    return 1;
+  if (!mb_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
+    return 2;
   }
 
   test_print();
