@@ -64,10 +64,11 @@ static bool cli_opts_verify(const struct cli_opt *const opts) {
 
     switch (o->type) {
     case CLI_OPT_TYPE_ACTION:
-      if (o->validator || o->assign) {
-        cli_opts_error("validators/parsers cannot be paired with actions");
+      if (o->assign) {
+        cli_opts_error("handlers cannot be paired with actions");
       }
-      if (!cli_opt_require(o, o->callback)) {
+
+      if (!cli_opt_require(o, o->handler.callback)) {
         ok = false;
       }
       break;
@@ -135,7 +136,7 @@ static bool cli_opt_assign(struct cli_opts *const app,
     cli_opts_help(app);
     break;
   case CLI_OPT_TYPE_ACTION:
-    opt->callback(opt->ctx);
+    opt->handler.callback(opt->ctx);
     break;
   case CLI_OPT_TYPE_BOOL:
     *(bool *)opt->dest = !*(bool *)opt->dest;
@@ -155,58 +156,61 @@ static bool cli_opt_assign(struct cli_opts *const app,
       return false;
     }
 
-    if (opt->validator != NULL && !opt->validator(str, opt->ctx)) {
-      return false;
-    }
-
     if (opt->assign != NULL) {
-      return opt->assign(str, opt->dest);
-    }
+      if (!opt->assign(str, opt->dest)) {
+        return false;
+      }
+    } else {
+      char *endptr = NULL;
+      union {
+        long l;
+        double d;
+      } val;
+      errno = 0;
 
-    char *endptr = NULL;
-    union {
-      long l;
-      double d;
-    } val;
-    errno = 0;
+      if (opt->type == CLI_OPT_TYPE_INT || opt->type == CLI_OPT_TYPE_LONG) {
+        val.l = strtol(str, &endptr, 10);
+      } else if (opt->type == CLI_OPT_TYPE_FLOAT ||
+                 opt->type == CLI_OPT_TYPE_DBL) {
+        val.d = strtod(str, &endptr);
+      }
 
-    if (opt->type == CLI_OPT_TYPE_INT || opt->type == CLI_OPT_TYPE_LONG) {
-      val.l = strtol(str, &endptr, 10);
-    } else if (opt->type == CLI_OPT_TYPE_FLOAT ||
-               opt->type == CLI_OPT_TYPE_DBL) {
-      val.d = strtod(str, &endptr);
-    }
-
-    if (endptr == str) {
-      fprintf(stderr, "not a number: '%s'", str);
-      return false;
-    } else if (errno == ERANGE) {
-      fprintf(stderr, "out of range: '%s'", str);
-      return false;
-    }
-
-    switch (opt->type) {
-    case CLI_OPT_TYPE_STR:
-      *(const char **)opt->dest = str;
-      break;
-    case CLI_OPT_TYPE_INT:
-      if (val.l > INT_MAX || val.l < INT_MIN) {
-        fprintf(stderr, "integer out of range: '%s'", str);
+      if (endptr == str) {
+        fprintf(stderr, "not a number: '%s'", str);
+        return false;
+      } else if (errno == ERANGE) {
+        fprintf(stderr, "out of range: '%s'", str);
         return false;
       }
 
-      *(int *)opt->dest = (int)val.l;
-      break;
-    case CLI_OPT_TYPE_LONG:
-      *(long *)opt->dest = val.l;
-      break;
-    case CLI_OPT_TYPE_FLOAT:
-      *(float *)opt->dest = (float)val.d;
-      break;
-    case CLI_OPT_TYPE_DBL:
-      *(double *)opt->dest = val.d;
-      break;
-    default:
+      switch (opt->type) {
+      case CLI_OPT_TYPE_STR:
+        *(const char **)opt->dest = str;
+        break;
+      case CLI_OPT_TYPE_INT:
+        if (val.l > INT_MAX || val.l < INT_MIN) {
+          fprintf(stderr, "integer out of range: '%s'", str);
+          return false;
+        }
+
+        *(int *)opt->dest = (int)val.l;
+        break;
+      case CLI_OPT_TYPE_LONG:
+        *(long *)opt->dest = val.l;
+        break;
+      case CLI_OPT_TYPE_FLOAT:
+        *(float *)opt->dest = (float)val.d;
+        break;
+      case CLI_OPT_TYPE_DBL:
+        *(double *)opt->dest = val.d;
+        break;
+      default:
+        break;
+      }
+    }
+
+    if (opt->handler.validator != NULL &&
+        !opt->handler.validator(opt->dest, opt->ctx)) {
       return false;
     }
   }
@@ -217,13 +221,13 @@ static bool cli_opt_assign(struct cli_opts *const app,
 
 static int cli_opts_match_long(struct cli_opts *const app) {
   const char *eq = strchr(app->token, '=');
-  size_t key_len = eq != NULL ? (size_t)(eq - app->token) : strlen(app->token);
+  size_t opt_len = eq != NULL ? (size_t)(eq - app->token) : strlen(app->token);
 
   for (const struct cli_opt *o = app->opts; o->type != CLI_OPT_END; o++) {
-    if ((o->longhand != NULL && strlen(o->longhand) == key_len &&
-         strncmp(o->longhand, app->token, key_len) == 0) ||
-        (o->alias != NULL && strlen(o->alias) == key_len &&
-         strncmp(o->alias, app->token, key_len) == 0)) {
+    if ((o->longhand != NULL && strlen(o->longhand) == opt_len &&
+         strncmp(o->longhand, app->token, opt_len) == 0) ||
+        (o->alias != NULL && strlen(o->alias) == opt_len &&
+         strncmp(o->alias, app->token, opt_len) == 0)) {
       app->token = eq != NULL ? (eq + 1) : NULL;
 
       if (!cli_opt_assign(app, o)) {

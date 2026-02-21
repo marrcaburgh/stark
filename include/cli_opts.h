@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -10,7 +11,7 @@ extern "C" {
 #endif
 
 typedef void (*cli_opt_callback)(void *ctx);
-typedef bool (*cli_opt_validator)(const char *str, void *ctx);
+typedef bool (*cli_opt_validator)(const char *val, void *ctx);
 typedef bool (*cli_opt_assigner)(const char *str, void *dest);
 
 enum cli_opt_type {
@@ -28,9 +29,9 @@ enum cli_opt_type {
 
   /* modifiers */
   CLI_OPT_REQ,
-  CLI_OPT_ARRAY,
   CLI_OPT_NON_NEG,
   CLI_OPT_NOT_EMPT,
+  CLI_OPT_ARRAY,
 
   /* builtin types */
   CLI_OPT_HELP,
@@ -38,22 +39,25 @@ enum cli_opt_type {
 };
 
 typedef struct cli_opt {
-  void *const dest;
   const char *longhand;
   const char *alias;
   enum cli_opt_type type;
   const char shorthand;
-  const char *help;
+  uint16_t elem_size;
+  void *const dest;
   void *const ctx;
-  const cli_opt_callback callback;
-  const cli_opt_validator validator;
   const cli_opt_assigner assign;
+  union {
+    const cli_opt_callback callback;
+    const cli_opt_validator validator;
+  } handler;
+  const char *help;
 } cli_opt;
 
 typedef struct cli_opts {
-  const struct cli_opt *opts;
   const char **argv;
   const char *token;
+  const struct cli_opt *opts;
   int argc;
   const char *desc;
 } cli_opts;
@@ -62,8 +66,8 @@ typedef struct cli_opts {
   {.shorthand = sh,                                                            \
    .longhand = lh,                                                             \
    .type = typ,                                                                \
-   .dest = dst,                                                                \
    .help = hlp,                                                                \
+   .dest = dst,                                                                \
    ##__VA_ARGS__}
 
 #define CLI_OPT_CALLBACK(sh, lh, act, context, hlp)                            \
