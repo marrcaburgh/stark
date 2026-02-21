@@ -70,7 +70,7 @@ enum mb_opts_type {
   MB_OPT_END
 };
 
-typedef struct mb_opt {
+MB_ALIGN64 typedef struct mb_opt {
   uint16_t type;            // 2 bytes
   const char shorthand;     // 1 byte
   const uint16_t elem_size; // 2 bytes
