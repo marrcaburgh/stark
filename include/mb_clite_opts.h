@@ -71,9 +71,9 @@ enum mb_opts_type {
 };
 
 MB_ALIGN64 typedef struct mb_opt {
-  uint16_t type;            // 2 bytes
-  const char shorthand;     // 1 byte
-  const uint16_t elem_size; // 2 bytes
+  uint16_t type;                 // 2 bytes
+  const unsigned char shorthand; // 1 byte
+  const uint16_t elem_size;      // 2 bytes
   uint8_t lens;
   const char *const longhand;    // 8 bytes
   const char *const alias;       // 8 bytes
@@ -90,6 +90,7 @@ MB_ALIGN64 typedef struct mb_opt {
 typedef struct mb_opts {
   const char *_token;
   const struct mb_opt *const opts;
+  const struct mb_opt *sh_lut[256];
   const char **_argv;
   int _argc;
   const char *desc;

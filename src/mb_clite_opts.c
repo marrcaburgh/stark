@@ -156,23 +156,17 @@ static int match_long(struct mb_opts *const app) {
 }
 
 static int match_short(struct mb_opts *const app) {
-  const struct mb_opt *o;
+  while (app->_token != NULL && *app->_token) {
+    const struct mb_opt *o = app->sh_lut[(unsigned char)*app->_token];
 
-  while (app->_token != NULL && *app->_token != '\0') {
-    for (o = app->opts; o->shorthand != *app->_token; o++) {
-      if (o->type == MB_OPT_END) {
-        return 2;
-      }
+    if (o == NULL) {
+      return 2;
     }
 
     app->_token = app->_token[1] != '\0' ? app->_token + 1 : NULL;
 
     if (!cli_opt_assign(app, o)) {
       return 1;
-    }
-
-    if (app->_token == NULL) {
-      break;
     }
   }
 
@@ -194,11 +188,15 @@ static bool require(const struct mb_opt *const opt, void *const ptr) {
     error("%soption '-%c' must have %s", kind, opt->shorthand, target);
   }
 
+  printf("require");
+
   return false;
 }
 
 MB_COLD bool _mb_opts_init(struct mb_opts *const app) {
   bool ok = true;
+
+  memset(app->sh_lut, 0, sizeof(app->sh_lut));
 
   for (struct mb_opt *o = (struct mb_opt *)app->opts; o->type != MB_OPT_END;
        o++) {
@@ -239,11 +237,6 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const app) {
     }
 
     for (const struct mb_opt *next = o + 1; next->type != MB_OPT_END; next++) {
-      if (o->shorthand != '\0' && o->shorthand == next->shorthand) {
-        error("duplicate shorthand '-%c'", o->shorthand);
-        ok = false;
-      }
-
       if (o->longhand != NULL && next->longhand != NULL &&
           strcmp(o->longhand, next->longhand) == 0) {
         error("duplicate longhand '--%s'", o->longhand);
@@ -271,6 +264,15 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const app) {
     }
 
     o->lens = alias_len << 4 | long_len;
+
+    if (o->shorthand != '\0') {
+      if (app->sh_lut[o->shorthand] == NULL) {
+        app->sh_lut[o->shorthand] = o;
+      } else {
+        error("duplicate shorthand '-%c'", o->shorthand);
+        ok = false;
+      }
+    }
   }
 
   return app->verified = ok;
