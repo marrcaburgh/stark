@@ -20,20 +20,19 @@ static void error(const char *const errstr, ...) {
   va_end(ap);
 }
 
-static void cli_opts_usage(const struct mb_opt *const restrict opt) {
+static void usage(const struct mb_opt *const restrict opt) {
   // TODO: print usage
 }
 
-static void cli_opts_help(struct mb_opts *const restrict app) {
+static void help(struct mb_opts *const restrict app) {
   // TODO: print help
 }
 
-MB_HOT static inline bool
-cli_opt_assign(struct mb_opts *const restrict app,
-               const struct mb_opt *const restrict opt) {
+MB_HOT static inline bool assign_opt(struct mb_opts *const restrict app,
+                                     const struct mb_opt *const restrict opt) {
   switch (opt->type) {
   case MB_OPT_TYPE_HELP:
-    cli_opts_help(app);
+    help(app);
 
     break;
   case MB_OPT_TYPE_CALLBACK:
@@ -197,7 +196,7 @@ static int match_long(struct mb_opts *const restrict app) {
   }
 
   app->_token = eq != NULL ? (eq + 1) : NULL;
-  return cli_opt_assign(app, o) ? 0 : 1;
+  return assign_opt(app, o) ? 0 : 1;
 }
 
 static int match_short(struct mb_opts *const restrict app) {
@@ -210,7 +209,7 @@ static int match_short(struct mb_opts *const restrict app) {
 
     app->_token = app->_token[1] != '\0' ? app->_token + 1 : NULL;
 
-    if (!cli_opt_assign(app, o)) {
+    if (!assign_opt(app, o)) {
       return MB_OPT_ASSIGN_FAILED;
     }
   }
