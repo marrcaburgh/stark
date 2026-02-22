@@ -10,16 +10,24 @@
 extern "C" {
 #endif
 
+#ifndef MB_LH_LUT_SIZE
+#define MB_LH_LUT_SIZE 128
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #define MB_ALIGN64 __attribute__((aligned(64)))
 #define likely(x) __builtin_expect(!!(x), 1)
 #define MB_COLD __attribute__((cold))
+#define MB_HOT __attribute__((hot, flatten, always_inline))
 #elif defined(_MSC_VER)
 #define MB_ALIGN64 __declspec(align(64))
 #else
 #define MB_ALIGN64
 #define MB_COLD
 #endif
+
+#define MB_OPT_UNKNOWN 2
+#define MB_OPT_ASSIGN_FAILED 1
 
 #define MB_OPT(sh, lh, typ, dst, hlp, ...)                                     \
   {.shorthand = sh,                                                            \
@@ -74,7 +82,7 @@ MB_ALIGN64 typedef struct mb_opt {
   uint16_t type;                 // 2 bytes
   const unsigned char shorthand; // 1 byte
   const uint16_t elem_size;      // 2 bytes
-  uint8_t lens;
+  // uint8_t lens;
   const char *const longhand;    // 8 bytes
   const char *const alias;       // 8 bytes
   void *const dest;              // 8 bytes
@@ -91,6 +99,7 @@ typedef struct mb_opts {
   const char *_token;
   const struct mb_opt *const opts;
   const struct mb_opt *sh_lut[256];
+  const struct mb_opt *lh_lut[256];
   const char **_argv;
   int _argc;
   const char *desc;

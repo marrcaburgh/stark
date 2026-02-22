@@ -28,8 +28,8 @@ static void cli_opts_help(struct mb_opts *app) {
   // TODO: print help
 }
 
-static inline bool cli_opt_assign(struct mb_opts *const app,
-                                  const struct mb_opt *const opt) {
+MB_HOT static inline bool cli_opt_assign(struct mb_opts *const app,
+                                         const struct mb_opt *const opt) {
   switch (opt->type) {
   case MB_OPT_HELP:
     cli_opts_help(app);
@@ -128,31 +128,50 @@ static inline bool cli_opt_assign(struct mb_opts *const app,
   return true;
 }
 
+static inline uint32_t hash(const char *str) {
+  uint32_t h = 2166136261u;
+
+  while (*str != '\0') {
+    h ^= (unsigned char)*str++;
+    h *= 16777619u;
+  }
+
+  return h;
+}
+
+static inline uint32_t hash_n(const char *str, size_t n) {
+  uint32_t h = 2166136261u;
+
+  for (size_t i = 0; i < n; i++) {
+    h ^= (unsigned char)*str++;
+    h *= 16777619u;
+  }
+
+  return h;
+}
+
 static int match_long(struct mb_opts *const app) {
   const char *eq = strchr(app->_token, '=');
   size_t t_len = eq != NULL ? (size_t)(eq - app->_token) : strlen(app->_token);
+  size_t i = hash_n(app->_token, t_len) & (MB_LH_LUT_SIZE - 1);
 
-  for (const struct mb_opt *o = app->opts; o->type != MB_OPT_END; o++) {
-    if ((o->lens & 0x0F) == t_len && o->longhand != NULL) {
-      if (memcmp(o->longhand, app->_token, t_len) == 0) {
-        goto found;
-      }
+  for (;;) {
+    const struct mb_opt *o = app->lh_lut[i];
+
+    if (o == NULL) {
+      return MB_OPT_UNKNOWN;
     }
 
-    if ((o->lens >> 4) == t_len && o->alias != NULL) {
-      if (memcmp(o->alias, app->_token, t_len) == 0) {
-        goto found;
-      }
+    if ((o->longhand != NULL && memcmp(o->longhand, app->_token, t_len) == 0 &&
+         o->longhand[t_len] == '\0') ||
+        (o->alias != NULL && memcmp(o->alias, app->_token, t_len) == 0 &&
+         o->alias[t_len] == '\0')) {
+      app->_token = eq != NULL ? (eq + 1) : NULL;
+      return cli_opt_assign(app, o) ? 0 : 1;
     }
 
-    continue;
-
-  found:
-    app->_token = eq != NULL ? (eq + 1) : NULL;
-    return cli_opt_assign(app, o) ? 0 : 1;
+    i = (i + 1) & (MB_LH_LUT_SIZE - 1);
   }
-
-  return 2;
 }
 
 static int match_short(struct mb_opts *const app) {
@@ -160,7 +179,7 @@ static int match_short(struct mb_opts *const app) {
     const struct mb_opt *o = app->sh_lut[(unsigned char)*app->_token];
 
     if (o == NULL) {
-      return 2;
+      return MB_OPT_UNKNOWN;
     }
 
     app->_token = app->_token[1] != '\0' ? app->_token + 1 : NULL;
@@ -197,6 +216,7 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const app) {
   bool ok = true;
 
   memset(app->sh_lut, 0, sizeof(app->sh_lut));
+  memset(app->lh_lut, 0, sizeof(app->lh_lut));
 
   for (struct mb_opt *o = (struct mb_opt *)app->opts; o->type != MB_OPT_END;
        o++) {
@@ -236,43 +256,81 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const app) {
       ok = false;
     }
 
-    for (const struct mb_opt *next = o + 1; next->type != MB_OPT_END; next++) {
-      if (o->longhand != NULL && next->longhand != NULL &&
-          strcmp(o->longhand, next->longhand) == 0) {
-        error("duplicate longhand '--%s'", o->longhand);
-        ok = false;
-      }
-
-      if (o->alias != NULL && next->alias != NULL &&
-          strcmp(o->alias, next->alias) == 0) {
-        error("duplicate alias '--%s'", o->alias);
-        ok = false;
-      }
-    }
-
-    uint8_t long_len = 0;
-    uint8_t alias_len = 0;
-
-    if (o->longhand != NULL) {
-      const size_t len = strlen(o->longhand);
-      long_len = (len > 15) ? 15 : (uint8_t)len;
-    }
-
-    if (o->alias != NULL) {
-      const size_t len = strlen(o->alias);
-      alias_len = (len > 15) ? 15 : (uint8_t)len;
-    }
-
-    o->lens = alias_len << 4 | long_len;
-
     if (o->shorthand != '\0') {
       if (app->sh_lut[o->shorthand] == NULL) {
         app->sh_lut[o->shorthand] = o;
       } else {
         error("duplicate shorthand '-%c'", o->shorthand);
-        ok = false;
       }
     }
+
+    if (o->longhand != NULL) {
+      uint32_t hsh = hash(o->longhand);
+      size_t i = hsh & (MB_LH_LUT_SIZE - 1);
+
+      while (app->lh_lut[i] != NULL) {
+        const struct mb_opt *prev = app->lh_lut[i];
+
+        if (prev->longhand != NULL) {
+          if (strcmp(prev->longhand, o->longhand) == 0) {
+            error("duplicate longhand '--%s'", o->longhand);
+
+            ok = false;
+            goto lh_dup;
+          }
+        }
+
+        if (prev->alias != NULL) {
+          if (strcmp(prev->alias, o->longhand) == 0) {
+            error("longhand '--%s' shadows alias '--%s'", o->longhand,
+                  prev->alias);
+
+            ok = false;
+            goto lh_dup;
+          }
+        }
+
+        i = (i + 1) & (MB_LH_LUT_SIZE - 1);
+      }
+
+      app->lh_lut[i] = o;
+    }
+
+  lh_dup:
+
+    if (o->alias != NULL) {
+      uint32_t hsh = hash(o->alias);
+      size_t i = hsh & (MB_LH_LUT_SIZE - 1);
+
+      while (app->lh_lut[i] != NULL) {
+        const struct mb_opt *prev = app->lh_lut[i];
+
+        if (prev->alias != NULL) {
+          if (strcmp(prev->alias, o->alias) == 0) {
+            error("duplicate alias '--%s'", o->alias);
+
+            ok = false;
+            goto al_dup;
+          }
+        }
+
+        if (prev->longhand != NULL) {
+          if (strcmp(prev->longhand, o->alias) == 0) {
+            error("alias '--%s' shadows longhand '--%s'", o->alias,
+                  prev->longhand);
+
+            ok = false;
+            goto al_dup;
+          }
+        }
+
+        i = (i + 1) & (MB_LH_LUT_SIZE - 1);
+      }
+      app->lh_lut[i] = o;
+    }
+
+  al_dup:
+    continue;
   }
 
   return app->verified = ok;
@@ -308,7 +366,7 @@ bool mb_opts_parse(struct mb_opts *const app, const int argc,
         break;
       case 1:
         return false;
-      case 2:
+      case MB_OPT_UNKNOWN:
         goto unknown;
       }
 
@@ -328,7 +386,7 @@ bool mb_opts_parse(struct mb_opts *const app, const int argc,
       break;
     case 1:
       return false;
-    case 2:
+    case MB_OPT_UNKNOWN:
       goto unknown;
     }
 

@@ -55,14 +55,11 @@ int main() {
     return 1;
   }
 
-  // if (unlikely(!mb_opts_init(&app))) {
-  //   return 1;
-  // }
   if (!mb_opts_init(&app)) {
     return 1;
   }
 
-  for (int i = 0; i < 100000000; i++) {
+  for (int i = 0; i < 1000000; i++) {
     mb_opts_parse(&app, argc, argv);
   }
 
