@@ -17,6 +17,7 @@ extern "C" {
 #if defined(__GNUC__) || defined(__clang__)
 #define MB_ALIGN64 __attribute__((aligned(64)))
 #define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 #define MB_COLD __attribute__((cold))
 #define MB_HOT __attribute__((hot, flatten, always_inline))
 #elif defined(_MSC_VER)
@@ -40,17 +41,15 @@ extern "C" {
 #define MB_OPT_CALLBACK(sh, lh, callback, context, hlp)                        \
   {.shorthand = sh,                                                            \
    .longhand = lh,                                                             \
-   .type = MB_OPT_CALLBACK,                                                    \
+   .type = MB_OPT_TYPE_CALLBACK,                                               \
    .handler.cb = callback,                                                     \
    .ctx = context,                                                             \
    .help = hlp}
 
-#define MB_OPT_LIST(...)                                                       \
-  __VA_ARGS__, MB_OPT('h', "help", MB_OPT_HELP, NULL, "prints this help"), {   \
-    .type = MB_OPT_END                                                         \
-  }
+#define MB_OPT_HELP {.shorthand = 'h', .longhand = "help", .type = MB_OPT_HELP}
 
-#define mb_opts_init(opts_ptr) likely(_mb_opts_init(opts_ptr))
+#define mb_opts_init(opts_ptr, opt, optc)                                      \
+  likely(_mb_opts_init(opts_ptr, opt, optc))
 
 typedef void (*mb_opts_callback)(const void *const ctx);
 typedef bool (*mb_opts_validator)(const char *const val, const void *const ctx);
@@ -58,31 +57,30 @@ typedef bool (*mb_opts_assigner)(const char *const str, void *const dest);
 
 enum mb_opts_type {
   /* regular types */
-  MB_OPT_BOOL,
-  MB_OPT_INT,
-  MB_OPT_LONG,
-  MB_OPT_FLOAT,
-  MB_OPT_DBL,
-  MB_OPT_STR,
+  MB_OPT_TYPE_BOOL,
+  MB_OPT_TYPE_INT,
+  MB_OPT_TYPE_LONG,
+  MB_OPT_TYPE_FLOAT,
+  MB_OPT_TYPE_DBL,
+  MB_OPT_TYPE_STR,
 
   /* special types */
-  MB_OPT_CALLBACK,
-  MB_OPT_CUSTOM,
+  MB_OPT_TYPE_CALLBACK,
+  MB_OPT_TYPE_CUSTOM,
 
   /* modifiers */
   MB_OPT_REQUIRED = 1 << 8,
   MB_OPT_ARRAY = 1 << 9,
 
   /* builtin types */
-  MB_OPT_HELP,
-  MB_OPT_END
+  MB_OPT_TYPE_HELP,
 };
 
 MB_ALIGN64 typedef struct mb_opt {
   uint16_t type;                 // 2 bytes
   const unsigned char shorthand; // 1 byte
   const uint16_t elem_size;      // 2 bytes
-  // uint8_t lens;
+  uint8_t lens;                  // 1 byte
   const char *const longhand;    // 8 bytes
   const char *const alias;       // 8 bytes
   void *const dest;              // 8 bytes
@@ -97,17 +95,17 @@ MB_ALIGN64 typedef struct mb_opt {
 
 typedef struct mb_opts {
   const char *_token;
-  const struct mb_opt *const opts;
   const struct mb_opt *sh_lut[256];
-  const struct mb_opt *lh_lut[256];
+  const struct mb_opt *lh_lut[MB_LH_LUT_SIZE];
   const char **_argv;
   int _argc;
   const char *desc;
   bool verified;
 } mb_opts;
 
-bool _mb_opts_init(mb_opts *const app);
-bool mb_opts_parse(struct mb_opts *const app, const int argc,
+bool _mb_opts_init(struct mb_opts *const restrict app,
+                   struct mb_opt *const opts, const size_t optsc);
+bool mb_opts_parse(struct mb_opts *const restrict app, const int argc,
                    const char **const argv);
 
 #ifdef __cplusplus

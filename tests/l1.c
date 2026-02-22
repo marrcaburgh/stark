@@ -9,35 +9,34 @@ int main() {
   const char *l, *z, *x, *c, *v, *b;
 
   struct mb_opt opts[] = {
-      // clang-format off
-      MB_OPT_LIST(MB_OPT('q', NULL, MB_OPT_BOOL, &q, NULL),
-                  MB_OPT('w', NULL, MB_OPT_BOOL, &w, NULL),
-                  MB_OPT('e', NULL, MB_OPT_BOOL, &e, NULL),
-                  MB_OPT('\0', "r", MB_OPT_BOOL, &r, NULL),
-                  MB_OPT('\0', "t", MB_OPT_BOOL, &t, NULL),
-                  MB_OPT('\0', "y", MB_OPT_BOOL, &y, NULL),
+      MB_OPT('q', NULL, MB_OPT_TYPE_BOOL, &q, NULL),
+      MB_OPT('w', NULL, MB_OPT_TYPE_BOOL, &w, NULL),
+      MB_OPT('e', NULL, MB_OPT_TYPE_BOOL, &e, NULL),
+      MB_OPT('\0', "r", MB_OPT_TYPE_BOOL, &r, NULL),
+      MB_OPT('\0', "t", MB_OPT_TYPE_BOOL, &t, NULL),
+      MB_OPT('\0', "y", MB_OPT_TYPE_BOOL, &y, NULL),
 
-                  MB_OPT('u', NULL, MB_OPT_LONG, &u, NULL),
-                  MB_OPT('i', NULL, MB_OPT_LONG, &i, NULL),
-                  MB_OPT('o', NULL, MB_OPT_LONG, &o, NULL),
-                  MB_OPT('\0', "p", MB_OPT_LONG, &p, NULL),
-                  MB_OPT('\0', "a", MB_OPT_LONG, &a, NULL),
-                  MB_OPT('\0', "s", MB_OPT_LONG, &s, NULL),
+      MB_OPT('u', NULL, MB_OPT_TYPE_LONG, &u, NULL),
+      MB_OPT('i', NULL, MB_OPT_TYPE_LONG, &i, NULL),
+      MB_OPT('o', NULL, MB_OPT_TYPE_LONG, &o, NULL),
+      MB_OPT('\0', "p", MB_OPT_TYPE_LONG, &p, NULL),
+      MB_OPT('\0', "a", MB_OPT_TYPE_LONG, &a, NULL),
+      MB_OPT('\0', "s", MB_OPT_TYPE_LONG, &s, NULL),
 
-                  MB_OPT('d', NULL, MB_OPT_DBL, &d, NULL),
-                  MB_OPT('f', NULL, MB_OPT_DBL, &f, NULL),
-                  MB_OPT('g', NULL, MB_OPT_DBL, &g, NULL),
-                  MB_OPT('\0', "h", MB_OPT_DBL, &h, NULL),
-                  MB_OPT('\0', "j", MB_OPT_DBL, &j, NULL),
-                  MB_OPT('\0', "k", MB_OPT_DBL, &k, NULL),
+      MB_OPT('d', NULL, MB_OPT_TYPE_DBL, &d, NULL),
+      MB_OPT('f', NULL, MB_OPT_TYPE_DBL, &f, NULL),
+      MB_OPT('g', NULL, MB_OPT_TYPE_DBL, &g, NULL),
+      MB_OPT('\0', "h", MB_OPT_TYPE_DBL, &h, NULL),
+      MB_OPT('\0', "j", MB_OPT_TYPE_DBL, &j, NULL),
+      MB_OPT('\0', "k", MB_OPT_TYPE_DBL, &k, NULL),
 
-                  MB_OPT('l', NULL, MB_OPT_STR, &l, NULL),
-                  MB_OPT('z', NULL, MB_OPT_STR, &z, NULL),
-                  MB_OPT('x', NULL, MB_OPT_STR, &x, NULL),
-                  MB_OPT('\0', "c", MB_OPT_STR, &c, NULL),
-                  MB_OPT('\0', "v", MB_OPT_STR, &v, NULL),
-                  MB_OPT('\0', "b", MB_OPT_STR, &b, NULL))
-      // clang-format on
+      MB_OPT('l', NULL, MB_OPT_TYPE_STR, &l, NULL),
+      MB_OPT('z', NULL, MB_OPT_TYPE_STR, &z, NULL),
+      MB_OPT('x', NULL, MB_OPT_TYPE_STR, &x, NULL),
+      MB_OPT('\0', "c", MB_OPT_TYPE_STR, &c, NULL),
+      MB_OPT('\0', "v", MB_OPT_TYPE_STR, &v, NULL),
+      MB_OPT('\0', "b", MB_OPT_TYPE_STR, &b, NULL)
+      // to keep the curly brace below, and opts on the left.
   };
 
   // static const char *argv[] = {
@@ -49,17 +48,13 @@ int main() {
   const char *argv[] = {"", "-q", "-q", "-q", "-q", "-q", "-q"};
   const int argc = sizeof(argv) / sizeof(*argv);
 
-  struct mb_opts app = {.opts = opts, .desc = "l1 test"};
+  struct mb_opts app = {.desc = "l1 test"};
 
-  if (!mb_opts_init(&app)) {
+  if (!mb_opts_init(&app, opts, sizeof(opts) / sizeof(struct mb_opt))) {
     return 1;
   }
 
-  if (!mb_opts_init(&app)) {
-    return 1;
-  }
-
-  for (int i = 0; i < 1000000; i++) {
+  for (int i = 0; i < 100000000; i++) {
     mb_opts_parse(&app, argc, argv);
   }
 

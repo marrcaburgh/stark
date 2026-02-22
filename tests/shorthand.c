@@ -14,9 +14,9 @@ int main() {
   };
   // clang-format on
 
-  struct mb_opts app = {.opts = opts, .desc = "shorthand test"};
+  struct mb_opts app = {.desc = "shorthand test"};
 
-  if (!mb_opts_init(&app)) {
+  if (!mb_opts_init(&app, opts, sizeof(opts))) {
     return 1;
   }
 

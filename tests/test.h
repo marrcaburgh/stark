@@ -9,7 +9,7 @@ extern int i;
 extern long l;
 extern float f;
 extern double d;
-extern struct mb_opt opts[];
+extern struct mb_opt opts[8];
 
 #define ARRAY_LENGTH(x) (sizeof(x) / sizeof(*x))
 
