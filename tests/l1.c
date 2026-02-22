@@ -1,5 +1,6 @@
 #include "mb_clite_opts.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 int main() {
@@ -39,16 +40,27 @@ int main() {
       // to keep the curly brace below, and opts on the left.
   };
 
-  static const char *argv[] = {
-      "",       "-q",      "-w",       "-e",       "--r",
-      "--t",    "--y",     "-u0",      "-i1",      "-o2",
-      "--p=3",  "--a=4",   "--s=5",    "-d0.0",    "-f1.0",
-      "-g2.0",  "--h=3.0", "--j=4.0",  "--k=5.0",  "-lstr0",
-      "-zstr1", "-xstr2",  "--c=str3", "--v=str4", "--b=str5"};
-  // const char *argv[] = {"", "-q", "-q", "-q", "-q", "-q", "-q"};
-  const int argc = sizeof(argv) / sizeof(*argv);
+  // static const char *argv[] = {"l1-longhand", "--r",        "--t",
+  //                              "--y",         "--p=0",      "--a=1",
+  //                              "--s=2",       "--h=0.0",    "--j=1.0",
+  //                              "--k=2.0",     "--c='str0'", "--v='str1'",
+  //                              "--b=str2"};
 
+  static const char *argv[] = {
+      "l1-shorthand", "-q",    "-w",    "-e",     "-u0",    "-i1",   "-o2",
+      "-d0.0",        "-f1.0", "-g2.9", "-lstr0", "-zstr1", "-xstr2"};
+
+  // static const char *argv[] = {
+  //     "l1-mixed", "-q",      "-w",       "-e",       "--r",
+  //     "--t",      "--y",     "-u0",      "-i1",      "-o2",
+  //     "--p=3",    "--a=4",   "--s=5",    "-d0.0",    "-f1.0",
+  //     "-g2.0",    "--h=3.0", "--j=4.0",  "--k=5.0",  "-lstr0",
+  //     "-zstr1",   "-xstr2",  "--c=str3", "--v=str4", "--b=str5"};
+
+  const int argc = sizeof(argv) / sizeof(argv[0]);
   struct mb_opts app = {.desc = "l1 test"};
+
+  printf("%s\n", argv[0]);
 
   if (!mb_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
     return 1;
