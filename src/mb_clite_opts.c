@@ -37,7 +37,7 @@ cli_opt_assign(struct mb_opts *const restrict app,
 
     break;
   case MB_OPT_TYPE_CALLBACK:
-    opt->handler.cb(opt->ctx);
+    opt->handler.callback(opt->ctx);
 
     break;
   case MB_OPT_TYPE_BOOL:
@@ -120,8 +120,8 @@ cli_opt_assign(struct mb_opts *const restrict app,
       }
     }
 
-    if (opt->handler.valid != NULL &&
-        !opt->handler.valid(opt->dest, opt->ctx)) {
+    if (opt->handler.validate != NULL &&
+        !opt->handler.validate(opt->dest, opt->ctx)) {
       return false;
     }
   }
@@ -153,13 +153,14 @@ static inline uint32_t hash_n(const char *restrict str, const size_t n) {
 }
 
 static int match_long(struct mb_opts *const restrict app) {
+  const struct mb_opt *o;
   const char *eq = strchr(app->_token, '=');
   const size_t t_len =
       eq != NULL ? (size_t)(eq - app->_token) : strlen(app->_token);
   size_t i = hash_n(app->_token, t_len) & (MB_LH_LUT_SIZE - 1);
 
-  for (;;) {
-    const struct mb_opt *o = app->lh_lut[i];
+  while (true) {
+    o = app->lh_lut[i];
 
     if (o == NULL) {
       return MB_OPT_UNKNOWN;
@@ -171,10 +172,10 @@ static int match_long(struct mb_opts *const restrict app) {
 
     const uint8_t long_len = o->lens >> 4;
 
-    if (long_len != 0xF && likely(long_len == t_len)) {
-      goto longhand_cmp;
-    } else if (likely(strlen(o->longhand) == t_len)) {
-      goto longhand_cmp;
+    if (((long_len != 0xF && likely(long_len == t_len)) ||
+         likely(strlen(o->longhand) == t_len)) &&
+        likely(memcmp(o->longhand, app->_token, t_len) == 0)) {
+      break;
     }
 
   alias:
@@ -182,36 +183,21 @@ static int match_long(struct mb_opts *const restrict app) {
       goto next;
     }
 
-    if (o->alias != NULL) {
-      const uint8_t alias_len = o->lens & 0x0F;
+    const uint8_t alias_len = o->lens & 0x0F;
 
-      if (alias_len != 0xF && likely(alias_len == t_len)) {
-        goto alias_cmp;
-      } else if (likely(strlen(o->alias) == t_len)) {
-        goto alias_cmp;
-      }
+    if (((alias_len != 0xF && likely(alias_len == t_len)) ||
+         likely(strlen(o->alias) == t_len)) &&
+        likely(memcmp(o->alias, app->_token, t_len) == 0)) {
+      break;
     }
 
   next:
     i = (i + 1) & (MB_LH_LUT_SIZE - 1);
     continue;
-
-  longhand_cmp:
-    if (likely(memcmp(o->longhand, app->_token, t_len) == 0)) {
-      goto match;
-    }
-    continue;
-
-  alias_cmp:
-    if (likely(memcmp(o->alias, app->_token, t_len) == 0)) {
-      goto match;
-    }
-    continue;
-
-  match:
-    app->_token = eq != NULL ? (eq + 1) : NULL;
-    return cli_opt_assign(app, o) ? 0 : 1;
   }
+
+  app->_token = eq != NULL ? (eq + 1) : NULL;
+  return cli_opt_assign(app, o) ? 0 : 1;
 }
 
 static int match_short(struct mb_opts *const restrict app) {
@@ -353,7 +339,7 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const restrict app,
         error("handlers cannot be paired with actions");
       }
 
-      if (!require(o, o->handler.cb)) {
+      if (!require(o, o->handler.callback)) {
         ok = false;
       }
 

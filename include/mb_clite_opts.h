@@ -87,8 +87,8 @@ MB_ALIGN64 typedef struct mb_opt {
   const mb_opts_assigner assign; // 8 bytes
   const void *const ctx;         // 8 bytes
   union {
-    const mb_opts_callback cb;
-    const mb_opts_validator valid;
+    const mb_opts_callback callback;
+    const mb_opts_validator validate;
   } handler;              // 8 bytes
   const char *const help; // 8 bytes
 } mb_opt;                 // fits into one CPU L1 cache line or 64b
