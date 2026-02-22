@@ -14,7 +14,7 @@ static void error(const char *const errstr, ...) {
   va_list ap;
 
   va_start(ap, errstr);
-  fprintf(stderr, "cli_opts error: ");
+  fprintf(stderr, "mb_opts error: ");
   vfprintf(stderr, errstr, ap);
   fprintf(stderr, "\n");
   va_end(ap);
@@ -335,7 +335,7 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const restrict app,
       break;
     case MB_OPT_TYPE_CALLBACK:
       if (o->assign) {
-        error("handlers cannot be paired with actions");
+        error("assigners cannot be paired with actions");
       }
 
       if (!require(o, o->handler.callback)) {
@@ -346,7 +346,7 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const restrict app,
     case MB_OPT_TYPE_HELP:
       break;
     default:
-      error("invalid mb_opt '%d'", o->type);
+      error("invalid type for option '%d'", o->type);
       ok = false;
     }
 
