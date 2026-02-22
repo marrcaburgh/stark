@@ -16,7 +16,7 @@ int main() {
 
   struct mb_opts app = {.desc = "shorthand test"};
 
-  if (!mb_opts_init(&app, opts, sizeof(opts))) {
+  if (!mb_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
     return 1;
   }
 

@@ -11,7 +11,7 @@ float f = 0.0f;
 double d = 0.0;
 FILE *file;
 
-void callback(const void *const ctx) { printf("action\n"); }
+void callback(const void *const ctx) { printf("callback\n"); }
 bool validate(const char *const str, const void *const ctx) { return false; }
 
 struct mb_opt opts[] = {

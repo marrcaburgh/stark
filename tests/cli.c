@@ -3,7 +3,7 @@
 int main(const int argc, const char *argv[]) {
   struct mb_opts app = {.desc = "cli test"};
 
-  if (!mb_opts_init(&app, opts, sizeof(opts))) {
+  if (!mb_opts_init(&app, opts, sizeof(opts[0]))) {
     return 1;
   }
 

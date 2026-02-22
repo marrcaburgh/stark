@@ -39,18 +39,18 @@ int main() {
       // to keep the curly brace below, and opts on the left.
   };
 
-  // static const char *argv[] = {
-  //     "",       "-q",      "-w",       "-e",       "--r",
-  //     "--t",    "--y",     "-u0",      "-i1",      "-o2",
-  //     "--p=3",  "--a=4",   "--s=5",    "-d0.0",    "-f1.0",
-  //     "-g2.0",  "--h=3.0", "--j=4.0",  "--k=5.0",  "-lstr0",
-  //     "-zstr1", "-xstr2",  "--c=str3", "--v=str4", "--b=str5"};
-  const char *argv[] = {"", "-q", "-q", "-q", "-q", "-q", "-q"};
+  static const char *argv[] = {
+      "",       "-q",      "-w",       "-e",       "--r",
+      "--t",    "--y",     "-u0",      "-i1",      "-o2",
+      "--p=3",  "--a=4",   "--s=5",    "-d0.0",    "-f1.0",
+      "-g2.0",  "--h=3.0", "--j=4.0",  "--k=5.0",  "-lstr0",
+      "-zstr1", "-xstr2",  "--c=str3", "--v=str4", "--b=str5"};
+  // const char *argv[] = {"", "-q", "-q", "-q", "-q", "-q", "-q"};
   const int argc = sizeof(argv) / sizeof(*argv);
 
   struct mb_opts app = {.desc = "l1 test"};
 
-  if (!mb_opts_init(&app, opts, sizeof(opts) / sizeof(struct mb_opt))) {
+  if (!mb_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
     return 1;
   }
 

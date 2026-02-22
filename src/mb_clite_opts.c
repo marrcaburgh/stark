@@ -165,48 +165,49 @@ static int match_long(struct mb_opts *const restrict app) {
       return MB_OPT_UNKNOWN;
     }
 
-    if (o->longhand != NULL) {
-      const uint8_t long_len = o->lens >> 4;
+    if (o->longhand == NULL) {
+      goto alias;
+    }
 
-      if (long_len != 0xF) {
-        if (likely(long_len == t_len)) {
-          goto lh_cmp;
-        }
-      } else {
-        if (likely(strlen(o->longhand) == t_len)) {
-          goto lh_cmp;
-        }
-      }
+    const uint8_t long_len = o->lens >> 4;
+
+    if (long_len != 0xF && likely(long_len == t_len)) {
+      goto longhand_cmp;
+    } else if (likely(strlen(o->longhand) == t_len)) {
+      goto longhand_cmp;
+    }
+
+  alias:
+    if (o->alias == NULL) {
+      goto next;
     }
 
     if (o->alias != NULL) {
       const uint8_t alias_len = o->lens & 0x0F;
 
-      if (alias_len != 0xF) {
-        if (likely(alias_len == t_len)) {
-          goto al_cmp;
-        }
-      } else {
-        if (likely(strlen(o->alias) == t_len)) {
-          goto al_cmp;
-        }
+      if (alias_len != 0xF && likely(alias_len == t_len)) {
+        goto alias_cmp;
+      } else if (likely(strlen(o->alias) == t_len)) {
+        goto alias_cmp;
       }
     }
 
+  next:
     i = (i + 1) & (MB_LH_LUT_SIZE - 1);
     continue;
 
-  lh_cmp:
+  longhand_cmp:
     if (likely(memcmp(o->longhand, app->_token, t_len) == 0)) {
       goto match;
     }
     continue;
 
-  al_cmp:
+  alias_cmp:
     if (likely(memcmp(o->alias, app->_token, t_len) == 0)) {
       goto match;
     }
     continue;
+
   match:
     app->_token = eq != NULL ? (eq + 1) : NULL;
     return cli_opt_assign(app, o) ? 0 : 1;
@@ -214,7 +215,7 @@ static int match_long(struct mb_opts *const restrict app) {
 }
 
 static int match_short(struct mb_opts *const restrict app) {
-  while (app->_token != NULL && *app->_token) {
+  while (app->_token != NULL && *app->_token != '\0') {
     const struct mb_opt *o = app->sh_lut[(unsigned char)*app->_token];
 
     if (o == NULL) {
@@ -224,7 +225,7 @@ static int match_short(struct mb_opts *const restrict app) {
     app->_token = app->_token[1] != '\0' ? app->_token + 1 : NULL;
 
     if (!cli_opt_assign(app, o)) {
-      return 1;
+      return MB_OPT_ASSIGN_FAILED;
     }
   }
 
@@ -248,6 +249,80 @@ static bool require(const struct mb_opt *const restrict opt,
   }
 
   return false;
+}
+
+MB_COLD bool populate_longhand_lut(struct mb_opts *const restrict app,
+                                   struct mb_opt *const restrict opt) {
+  bool ok = true;
+  uint8_t long_len = 0;
+  uint8_t alias_len = 0;
+
+  if (opt->longhand != NULL) {
+    uint32_t hsh = hash(opt->longhand);
+    size_t i = hsh & (MB_LH_LUT_SIZE - 1);
+
+    while (app->lh_lut[i] != NULL) {
+      const struct mb_opt *prev = app->lh_lut[i];
+
+      if (prev->longhand != NULL &&
+          strcmp(prev->longhand, opt->longhand) == 0) {
+        error("duplicate longhand '--%s'", opt->longhand);
+
+        ok = false;
+        goto lh_dup;
+      }
+
+      if (prev->alias != NULL && strcmp(prev->alias, opt->longhand) == 0) {
+        error("longhand '--%s' shadows alias '--%s'", opt->longhand,
+              prev->alias);
+
+        ok = false;
+        goto lh_dup;
+      }
+
+      i = (i + 1) & (MB_LH_LUT_SIZE - 1);
+    }
+
+    app->lh_lut[i] = opt;
+    long_len = strlen(opt->longhand);
+  }
+
+lh_dup:
+
+  if (opt->alias != NULL) {
+    uint32_t hsh = hash(opt->alias);
+    size_t i = hsh & (MB_LH_LUT_SIZE - 1);
+
+    while (app->lh_lut[i] != NULL) {
+      const struct mb_opt *prev = app->lh_lut[i];
+
+      if (prev->alias != NULL && strcmp(prev->alias, opt->alias) == 0) {
+        error("duplicate alias '--%s'", opt->alias);
+
+        ok = false;
+        goto al_dup;
+      }
+
+      if (prev->longhand != NULL && strcmp(prev->longhand, opt->alias) == 0) {
+        error("alias '--%s' shadows longhand '--%s'", opt->alias,
+              prev->longhand);
+
+        ok = false;
+        goto al_dup;
+      }
+
+      i = (i + 1) & (MB_LH_LUT_SIZE - 1);
+    }
+
+    app->lh_lut[i] = opt;
+    alias_len = strlen(opt->alias);
+  }
+
+  opt->lens = ((long_len > 15 ? 0xF : long_len) << 4) |
+              ((alias_len > 15 ? 0xF : alias_len));
+
+al_dup:
+  return ok;
 }
 
 MB_COLD bool _mb_opts_init(struct mb_opts *const restrict app,
@@ -295,90 +370,18 @@ MB_COLD bool _mb_opts_init(struct mb_opts *const restrict app,
       ok = false;
     }
 
-    if (o->shorthand != '\0') {
-      if (app->sh_lut[o->shorthand] == NULL) {
-        app->sh_lut[o->shorthand] = o;
-      } else {
-        error("duplicate shorthand '-%c'", o->shorthand);
-      }
+    if (o->shorthand == '\0') {
+      goto longhand;
     }
 
-    uint8_t long_len = 0;
-    uint8_t alias_len = 0;
-
-    if (o->longhand != NULL) {
-      uint32_t hsh = hash(o->longhand);
-      size_t i = hsh & (MB_LH_LUT_SIZE - 1);
-
-      while (app->lh_lut[i] != NULL) {
-        const struct mb_opt *prev = app->lh_lut[i];
-
-        if (prev->longhand != NULL) {
-          if (strcmp(prev->longhand, o->longhand) == 0) {
-            error("duplicate longhand '--%s'", o->longhand);
-
-            ok = false;
-            goto lh_dup;
-          }
-        }
-
-        if (prev->alias != NULL) {
-          if (strcmp(prev->alias, o->longhand) == 0) {
-            error("longhand '--%s' shadows alias '--%s'", o->longhand,
-                  prev->alias);
-
-            ok = false;
-            goto lh_dup;
-          }
-        }
-
-        i = (i + 1) & (MB_LH_LUT_SIZE - 1);
-      }
-
-      app->lh_lut[i] = o;
-      long_len = strlen(o->longhand);
+    if (app->sh_lut[o->shorthand] == NULL) {
+      app->sh_lut[o->shorthand] = o;
+    } else {
+      error("duplicate shorthand '-%c'", o->shorthand);
     }
 
-  lh_dup:
-
-    if (o->alias != NULL) {
-      uint32_t hsh = hash(o->alias);
-      size_t i = hsh & (MB_LH_LUT_SIZE - 1);
-
-      while (app->lh_lut[i] != NULL) {
-        const struct mb_opt *prev = app->lh_lut[i];
-
-        if (prev->alias != NULL) {
-          if (strcmp(prev->alias, o->alias) == 0) {
-            error("duplicate alias '--%s'", o->alias);
-
-            ok = false;
-            goto al_dup;
-          }
-        }
-
-        if (prev->longhand != NULL) {
-          if (strcmp(prev->longhand, o->alias) == 0) {
-            error("alias '--%s' shadows longhand '--%s'", o->alias,
-                  prev->longhand);
-
-            ok = false;
-            goto al_dup;
-          }
-        }
-
-        i = (i + 1) & (MB_LH_LUT_SIZE - 1);
-      }
-
-      app->lh_lut[i] = o;
-      alias_len = strlen(o->alias);
-    }
-
-    o->lens = ((long_len > 15 ? 0xF : long_len) << 4) |
-              ((alias_len > 15 ? 0xF : alias_len));
-
-  al_dup:
-    continue;
+  longhand:
+    ok = populate_longhand_lut(app, o);
   }
 
   return app->verified = ok;
