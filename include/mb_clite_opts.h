@@ -42,7 +42,7 @@ extern "C" {
   {.shorthand = sh,                                                            \
    .longhand = lh,                                                             \
    .type = MB_OPT_TYPE_CALLBACK,                                               \
-   .handler.cb = callback,                                                     \
+   .handler.callback = callback,                                               \
    .ctx = context,                                                             \
    .help = hlp}
 
