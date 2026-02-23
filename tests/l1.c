@@ -1,4 +1,6 @@
-#include "mb_clite_opts.h"
+#include "mbx/opts.h"
+
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,34 +11,34 @@ int main() {
   double d, f, g, h, j, k;
   const char *l, *z, *x, *c, *v, *b;
 
-  struct mb_opt opts[] = {
-      MB_OPT('q', NULL, MB_OPT_TYPE_BOOL, &q, NULL),
-      MB_OPT('w', NULL, MB_OPT_TYPE_BOOL, &w, NULL),
-      MB_OPT('e', NULL, MB_OPT_TYPE_BOOL, &e, NULL),
-      MB_OPT('\0', "r", MB_OPT_TYPE_BOOL, &r, NULL),
-      MB_OPT('\0', "t", MB_OPT_TYPE_BOOL, &t, NULL),
-      MB_OPT('\0', "y", MB_OPT_TYPE_BOOL, &y, NULL),
+  struct mbx_opt opts[] = {
+      MBX_OPT('q', NULL, MBX_OPT_TYPE_BOOL, &q, NULL),
+      MBX_OPT('w', NULL, MBX_OPT_TYPE_BOOL, &w, NULL),
+      MBX_OPT('e', NULL, MBX_OPT_TYPE_BOOL, &e, NULL),
+      MBX_OPT('\0', "r", MBX_OPT_TYPE_BOOL, &r, NULL),
+      MBX_OPT('\0', "t", MBX_OPT_TYPE_BOOL, &t, NULL),
+      MBX_OPT('\0', "y", MBX_OPT_TYPE_BOOL, &y, NULL),
 
-      MB_OPT('u', NULL, MB_OPT_TYPE_LONG, &u, NULL),
-      MB_OPT('i', NULL, MB_OPT_TYPE_LONG, &i, NULL),
-      MB_OPT('o', NULL, MB_OPT_TYPE_LONG, &o, NULL),
-      MB_OPT('\0', "p", MB_OPT_TYPE_LONG, &p, NULL),
-      MB_OPT('\0', "a", MB_OPT_TYPE_LONG, &a, NULL),
-      MB_OPT('\0', "s", MB_OPT_TYPE_LONG, &s, NULL),
+      MBX_OPT('u', NULL, MBX_OPT_TYPE_LONG, &u, NULL),
+      MBX_OPT('i', NULL, MBX_OPT_TYPE_LONG, &i, NULL),
+      MBX_OPT('o', NULL, MBX_OPT_TYPE_LONG, &o, NULL),
+      MBX_OPT('\0', "p", MBX_OPT_TYPE_LONG, &p, NULL),
+      MBX_OPT('\0', "a", MBX_OPT_TYPE_LONG, &a, NULL),
+      MBX_OPT('\0', "s", MBX_OPT_TYPE_LONG, &s, NULL),
 
-      MB_OPT('d', NULL, MB_OPT_TYPE_DBL, &d, NULL),
-      MB_OPT('f', NULL, MB_OPT_TYPE_DBL, &f, NULL),
-      MB_OPT('g', NULL, MB_OPT_TYPE_DBL, &g, NULL),
-      MB_OPT('\0', "h", MB_OPT_TYPE_DBL, &h, NULL),
-      MB_OPT('\0', "j", MB_OPT_TYPE_DBL, &j, NULL),
-      MB_OPT('\0', "k", MB_OPT_TYPE_DBL, &k, NULL),
+      MBX_OPT('d', NULL, MBX_OPT_TYPE_DBL, &d, NULL),
+      MBX_OPT('f', NULL, MBX_OPT_TYPE_DBL, &f, NULL),
+      MBX_OPT('g', NULL, MBX_OPT_TYPE_DBL, &g, NULL),
+      MBX_OPT('\0', "h", MBX_OPT_TYPE_DBL, &h, NULL),
+      MBX_OPT('\0', "j", MBX_OPT_TYPE_DBL, &j, NULL),
+      MBX_OPT('\0', "k", MBX_OPT_TYPE_DBL, &k, NULL),
 
-      MB_OPT('l', NULL, MB_OPT_TYPE_STR, &l, NULL),
-      MB_OPT('z', NULL, MB_OPT_TYPE_STR, &z, NULL),
-      MB_OPT('x', NULL, MB_OPT_TYPE_STR, &x, NULL),
-      MB_OPT('\0', "c", MB_OPT_TYPE_STR, &c, NULL),
-      MB_OPT('\0', "v", MB_OPT_TYPE_STR, &v, NULL),
-      MB_OPT('\0', "b", MB_OPT_TYPE_STR, &b, NULL)
+      MBX_OPT('l', NULL, MBX_OPT_TYPE_STR, &l, NULL),
+      MBX_OPT('z', NULL, MBX_OPT_TYPE_STR, &z, NULL),
+      MBX_OPT('x', NULL, MBX_OPT_TYPE_STR, &x, NULL),
+      MBX_OPT('\0', "c", MBX_OPT_TYPE_STR, &c, NULL),
+      MBX_OPT('\0', "v", MBX_OPT_TYPE_STR, &v, NULL),
+      MBX_OPT('\0', "b", MBX_OPT_TYPE_STR, &b, NULL)
       // to keep the curly brace below, and opts on the left.
   };
 
@@ -58,16 +60,16 @@ int main() {
   //     "-zstr1",   "-xstr2",  "--c=str3", "--v=str4", "--b=str5"};
 
   const int argc = sizeof(argv) / sizeof(argv[0]);
-  struct mb_opts app = {.desc = "l1 test"};
+  struct mbx_opts app = {.desc = "l1 test"};
 
   printf("%s\n", argv[0]);
 
-  if (!mb_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
+  if (!mbx_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
     return 1;
   }
 
   for (int i = 0; i < 100000000; i++) {
-    mb_opts_parse(&app, argc, argv);
+    mbx_opts_parse(&app, argc, argv);
   }
 
   return 0;

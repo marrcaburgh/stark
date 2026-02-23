@@ -14,15 +14,15 @@ FILE *file;
 void callback(const void *const ctx) { printf("callback\n"); }
 bool validate(const char *const str, const void *const ctx) { return false; }
 
-struct mb_opt opts[] = {
+struct mbx_opt opts[] = {
     // clang-format off
-      MB_OPT('b', "boolean", MB_OPT_TYPE_BOOL, &b, "a flag/boolean"),
-      MB_OPT('s', "string", MB_OPT_TYPE_STR, &str, "a string"),
-      MB_OPT('i', "integer", MB_OPT_TYPE_INT, &i, "an integer"),
-      MB_OPT('l', "long", MB_OPT_TYPE_LONG, &l, "a long"),
-      MB_OPT('f', "float", MB_OPT_TYPE_FLOAT, &f, "a float"),
-      MB_OPT('d', "double", MB_OPT_TYPE_DBL, &d, "a double"),
-      MB_OPT_CALLBACK('c', "callback", callback, NULL, "a callback")
+      MBX_OPT('b', "boolean", MBX_OPT_TYPE_BOOL, &b, "a flag/boolean"),
+      MBX_OPT('s', "string", MBX_OPT_TYPE_STR, &str, "a string"),
+      MBX_OPT('i', "integer", MBX_OPT_TYPE_INT, &i, "an integer"),
+      MBX_OPT('l', "long", MBX_OPT_TYPE_LONG, &l, "a long"),
+      MBX_OPT('f', "float", MBX_OPT_TYPE_FLOAT, &f, "a float"),
+      MBX_OPT('d', "double", MBX_OPT_TYPE_DBL, &d, "a double"),
+      MBX_OPT_CALLBACK('c', "callback", callback, NULL, "a callback")
     // clang-format on
 };
 

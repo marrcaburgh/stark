@@ -14,13 +14,13 @@ int main() {
   };
   // clang-format on
 
-  struct mb_opts app = {.desc = "shorthand test"};
+  struct mbx_opts app = {.desc = "shorthand test"};
 
-  if (!mb_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
+  if (!mbx_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
     return 1;
   }
 
-  if (!mb_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
+  if (!mbx_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
     return 2;
   }
 
