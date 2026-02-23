@@ -42,15 +42,14 @@ int main() {
       // to keep the curly brace below, and opts on the left.
   };
 
-  // static const char *argv[] = {"l1-longhand", "--r",        "--t",
-  //                              "--y",         "--p=0",      "--a=1",
-  //                              "--s=2",       "--h=0.0",    "--j=1.0",
-  //                              "--k=2.0",     "--c='str0'", "--v='str1'",
-  //                              "--b=str2"};
-
   static const char *argv[] = {
       "l1-shorthand", "-q",    "-w",    "-e",     "-u0",    "-i1",   "-o2",
-      "-d0.0",        "-f1.0", "-g2.9", "-lstr0", "-zstr1", "-xstr2"};
+      "-d0.0",        "-f1.0", "-g2.0", "-lstr0", "-zstr1", "-xstr2"};
+
+  // static const char *argv[] = {
+  //     "l1-longhand", "--r",        "--t",     "--y",     "--p=0",
+  //     "--a=1",       "--s=2",      "--h=0.0", "--j=1.0", "--k=2.0",
+  //     "--c='str0'",  "--v='str1'", "--b=str2"};
 
   // static const char *argv[] = {
   //     "l1-mixed", "-q",      "-w",       "-e",       "--r",
