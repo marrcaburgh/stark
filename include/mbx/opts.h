@@ -92,7 +92,7 @@ MB_ALIGN64 typedef struct mbx_opt {
     const mbx_opt_validator validate;
   } handler;               // 8 bytes
   const char *const usage; // 8 bytes
-} mb_opt;                  // fits into one CPU L1 cache line or 64b
+} mbx_opt;                 // fits into one CPU L1 cache line or 64b
 
 typedef struct mbx_opts {
   const char *_token;
@@ -102,7 +102,7 @@ typedef struct mbx_opts {
   int _argc;
   const char *desc;
   bool verified;
-} mb_opts;
+} mbx_opts;
 
 bool _mbx_opts_init(struct mbx_opts *const restrict app,
                     struct mbx_opt *const opts, const size_t optsc);
