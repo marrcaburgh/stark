@@ -51,11 +51,11 @@ extern "C" {
 #define mb_opts_init(opts_ptr, opt, optc)                                      \
   likely(_mb_opts_init(opts_ptr, opt, optc))
 
-typedef void (*mb_opts_callback)(const void *const ctx);
-typedef bool (*mb_opts_validator)(const char *const val, const void *const ctx);
+typedef void (*mb_opt_callback)(const void *const ctx);
+typedef bool (*mb_opt_validator)(const char *const val, const void *const ctx);
 typedef bool (*mb_opts_assigner)(const char *const str, void *const dest);
 
-enum mb_opts_type {
+enum mb_opt_type {
   /* regular types */
   MB_OPT_TYPE_BOOL,
   MB_OPT_TYPE_INT,
@@ -86,12 +86,12 @@ MB_ALIGN64 typedef struct mb_opt {
   void *const dest;              // 8 bytes
   const mb_opts_assigner assign; // 8 bytes
   const void *const ctx;         // 8 bytes
-  union {
-    const mb_opts_callback callback;
-    const mb_opts_validator validate;
-  } handler;              // 8 bytes
-  const char *const help; // 8 bytes
-} mb_opt;                 // fits into one CPU L1 cache line or 64b
+  const union {
+    const mb_opt_callback callback;
+    const mb_opt_validator validate;
+  } handler;               // 8 bytes
+  const char *const usage; // 8 bytes
+} mb_opt;                  // fits into one CPU L1 cache line or 64b
 
 typedef struct mb_opts {
   const char *_token;
