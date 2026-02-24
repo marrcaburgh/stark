@@ -60,8 +60,10 @@ MB_HOT static inline bool assign_opt(struct mbx_opts *const restrict app,
       return false;
     }
 
-    if (opt->assign != NULL && !opt->assign(str, opt->dest)) {
-      return false;
+    if (opt->assign != NULL) {
+      if (!opt->assign(str, opt->dest)) {
+        return false;
+      }
     } else {
       char *endptr = NULL;
       union {
@@ -78,11 +80,11 @@ MB_HOT static inline bool assign_opt(struct mbx_opts *const restrict app,
       }
 
       if (endptr == str) {
-        fprintf(stderr, "not a number: '%s'", str);
+        fprintf(stderr, "not a number: '%s'\n", str);
 
         return false;
       } else if (errno == ERANGE) {
-        fprintf(stderr, "out of range: '%s'", str);
+        fprintf(stderr, "out of range: '%s'\n", str);
 
         return false;
       }
@@ -94,7 +96,7 @@ MB_HOT static inline bool assign_opt(struct mbx_opts *const restrict app,
         break;
       case MBX_OPT_TYPE_INT:
         if (val.l > INT_MAX || val.l < INT_MIN) {
-          fprintf(stderr, "integer out of range: '%s'", str);
+          fprintf(stderr, "integer out of range: '%s'\n", str);
 
           return false;
         }
@@ -159,7 +161,7 @@ static int match_long(struct mbx_opts *const restrict app) {
   size_t i = hash_n(app->_token, t_len) & (MB_LH_LUT_SIZE - 1);
 
   while (true) {
-    o = app->lh_lut[i];
+    o = app->_lh_lut[i];
 
     if (o == NULL) {
       return MBX_OPT_UNKNOWN;
@@ -201,7 +203,7 @@ static int match_long(struct mbx_opts *const restrict app) {
 
 static int match_short(struct mbx_opts *const restrict app) {
   while (app->_token != NULL && *app->_token != '\0') {
-    const struct mbx_opt *o = app->sh_lut[(unsigned char)*app->_token];
+    const struct mbx_opt *o = app->_sh_lut[(unsigned char)*app->_token];
 
     if (o == NULL) {
       return MBX_OPT_UNKNOWN;
@@ -229,7 +231,7 @@ static bool require(const struct mbx_opt *const restrict opt,
 
   if (opt->longhand != NULL) {
     error("%soption '--%s' must have %s", kind, opt->longhand, target);
-  } else {
+  } else if (opt->shorthand != '\0') {
     error("%soption '-%c' must have %s", kind, opt->shorthand, target);
   }
 
@@ -246,8 +248,8 @@ MB_COLD bool populate_longhand_lut(struct mbx_opts *const restrict app,
     uint32_t hsh = hash(opt->longhand);
     size_t i = hsh & (MB_LH_LUT_SIZE - 1);
 
-    while (app->lh_lut[i] != NULL) {
-      const struct mbx_opt *prev = app->lh_lut[i];
+    while (app->_lh_lut[i] != NULL) {
+      const struct mbx_opt *prev = app->_lh_lut[i];
 
       if (prev->longhand != NULL &&
           strcmp(prev->longhand, opt->longhand) == 0) {
@@ -268,7 +270,7 @@ MB_COLD bool populate_longhand_lut(struct mbx_opts *const restrict app,
       i = (i + 1) & (MB_LH_LUT_SIZE - 1);
     }
 
-    app->lh_lut[i] = opt;
+    app->_lh_lut[i] = opt;
     long_len = strlen(opt->longhand);
   }
 
@@ -278,8 +280,8 @@ lh_dup:
     uint32_t hsh = hash(opt->alias);
     size_t i = hsh & (MB_LH_LUT_SIZE - 1);
 
-    while (app->lh_lut[i] != NULL) {
-      const struct mbx_opt *prev = app->lh_lut[i];
+    while (app->_lh_lut[i] != NULL) {
+      const struct mbx_opt *prev = app->_lh_lut[i];
 
       if (prev->alias != NULL && strcmp(prev->alias, opt->alias) == 0) {
         error("duplicate alias '--%s'", opt->alias);
@@ -299,7 +301,7 @@ lh_dup:
       i = (i + 1) & (MB_LH_LUT_SIZE - 1);
     }
 
-    app->lh_lut[i] = opt;
+    app->_lh_lut[i] = opt;
     alias_len = strlen(opt->alias);
   }
 
@@ -310,15 +312,33 @@ al_dup:
   return ok;
 }
 
-MB_COLD bool _mbx_opts_init(struct mbx_opts *const restrict app,
-                            struct mbx_opt *const opts, const size_t optsc) {
+MB_COLD bool _mbx_opts_init(struct mbx_opts *const restrict opts,
+                            struct mbx_opt *const opt, const size_t optc) {
+  if (opts == NULL) {
+    error("opts cannot be null");
+
+    return false;
+  }
+
+  if (opt == NULL) {
+    error("opt cannot be null");
+
+    return false;
+  }
+
+  if (optc == 0) {
+    error("optc cannot be zero");
+
+    return false;
+  }
+
   bool ok = true;
 
-  memset(app->sh_lut, 0, sizeof(app->sh_lut));
-  memset(app->lh_lut, 0, sizeof(app->lh_lut));
+  memset(opts->_sh_lut, 0, sizeof(opts->_sh_lut));
+  memset(opts->_lh_lut, 0, sizeof(opts->_lh_lut));
 
-  for (size_t i = 0; i < optsc; i++) {
-    struct mbx_opt *const o = &opts[i];
+  for (size_t i = 0; i < optc; i++) {
+    struct mbx_opt *const o = &opt[i];
 
     switch (o->type) {
     case MBX_OPT_TYPE_CUSTOM:
@@ -336,6 +356,8 @@ MB_COLD bool _mbx_opts_init(struct mbx_opts *const restrict app,
     case MBX_OPT_TYPE_CALLBACK:
       if (o->assign) {
         error("assigners cannot be paired with actions");
+
+        ok = false;
       }
 
       if (!require(o, o->handler.callback)) {
@@ -347,11 +369,13 @@ MB_COLD bool _mbx_opts_init(struct mbx_opts *const restrict app,
       break;
     default:
       error("invalid type for option '%d'", o->type);
+
       ok = false;
     }
 
     if (o->shorthand == '\0' && o->longhand == NULL) {
       error("options must have either a shorthand or longhand");
+
       ok = false;
     }
 
@@ -359,22 +383,24 @@ MB_COLD bool _mbx_opts_init(struct mbx_opts *const restrict app,
       goto longhand;
     }
 
-    if (app->sh_lut[o->shorthand] == NULL) {
-      app->sh_lut[o->shorthand] = o;
+    if (opts->_sh_lut[o->shorthand] == NULL) {
+      opts->_sh_lut[o->shorthand] = o;
     } else {
       error("duplicate shorthand '-%c'", o->shorthand);
+
+      ok = false;
     }
 
   longhand:
-    ok = populate_longhand_lut(app, o);
+    ok &= populate_longhand_lut(opts, o);
   }
 
-  return app->verified = ok;
+  return opts->_verified = ok;
 }
 
 bool mbx_opts_parse(struct mbx_opts *const restrict app, const int argc,
                     const char **const argv) {
-  if (!app->verified) {
+  if (!app->_verified) {
     error("not verified, did you forget 'mb_opts_init'?");
 
     return false;

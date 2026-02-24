@@ -47,7 +47,7 @@ extern "C" {
    .usage = usg}
 
 #define MBX_OPT_HELP                                                           \
-  {.shorthand = 'h', .longhand = "help", .type = MBX_OPT_HELP}
+  {.shorthand = 'h', .longhand = "help", .type = MBX_OPT_TYPE_HELP}
 
 #define mbx_opts_init(opts_ptr, opt, optc)                                     \
   likely(_mbx_opts_init(opts_ptr, opt, optc))
@@ -94,14 +94,20 @@ MB_ALIGN64 typedef struct mbx_opt {
   const char *const usage; // 8 bytes
 } mbx_opt;                 // fits into one CPU L1 cache line or 64b
 
+typedef struct mbx_opt_lh_lut {
+  const struct mbx_opt *entries[MB_LH_LUT_SIZE];
+  uint32_t displace[MB_LH_LUT_SIZE];
+} mbx_opt_lh_lut;
+
 typedef struct mbx_opts {
   const char *_token;
-  const struct mbx_opt *sh_lut[256];
-  const struct mbx_opt *lh_lut[MB_LH_LUT_SIZE];
+  const struct mbx_opt *_sh_lut[256];
+  // const struct mbx_opt_lh_lut _lh_lut;
+  const struct mbx_opt *_lh_lut[MB_LH_LUT_SIZE];
   const char **_argv;
   int _argc;
   const char *desc;
-  bool verified;
+  bool _verified;
 } mbx_opts;
 
 bool _mbx_opts_init(struct mbx_opts *const restrict app,
