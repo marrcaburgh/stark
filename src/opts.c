@@ -153,7 +153,7 @@ static inline uint32_t hash_n(const char *restrict str, const size_t n) {
   return h;
 }
 
-static int match_long(struct mbx_opts *const restrict app) {
+MB_HOT static inline int match_longhand(struct mbx_opts *const restrict app) {
   const struct mbx_opt *o;
   const char *eq = strchr(app->_token, '=');
   const size_t t_len =
@@ -201,19 +201,24 @@ static int match_long(struct mbx_opts *const restrict app) {
   return assign_opt(app, o) ? 0 : 1;
 }
 
-static int match_short(struct mbx_opts *const restrict app) {
-  while (app->_token != NULL && *app->_token != '\0') {
-    const struct mbx_opt *o = app->_sh_lut[(unsigned char)*app->_token];
+MB_HOT static inline int match_shorthand(struct mbx_opts *const restrict app,
+                                         const bool combined) {
+  const struct mbx_opt *o;
+ms_loop:
+  o = app->_sh_lut[(unsigned char)*app->_token];
 
-    if (o == NULL) {
-      return MBX_OPT_UNKNOWN;
-    }
+  if (o == NULL) {
+    return MBX_OPT_UNKNOWN;
+  }
 
-    app->_token = app->_token[1] != '\0' ? app->_token + 1 : NULL;
+  app->_token = app->_token[1] != '\0' ? app->_token + 1 : NULL;
 
-    if (!assign_opt(app, o)) {
-      return MBX_OPT_ASSIGN_FAILED;
-    }
+  if (!assign_opt(app, o)) {
+    return MBX_OPT_ASSIGN_FAILED;
+  }
+
+  if (combined && app->_token != NULL) {
+    goto ms_loop;
   }
 
   return 0;
@@ -423,7 +428,7 @@ bool mbx_opts_parse(struct mbx_opts *const restrict app, const int argc,
     if (arg[1] != '-') {
       app->_token = arg + 1;
 
-      switch (match_short(app)) {
+      switch (match_shorthand(app, app->_token[1] != '\0')) {
       case 0:
         break;
       case 1:
@@ -443,7 +448,7 @@ bool mbx_opts_parse(struct mbx_opts *const restrict app, const int argc,
 
     app->_token = arg + 2;
 
-    switch (match_long(app)) {
+    switch (match_longhand(app)) {
     case 0:
       break;
     case 1:
