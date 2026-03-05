@@ -1,18 +1,24 @@
-#ifndef TEST_H
-#define TEST_H
+#ifndef BENCHMARK_H
+#define BENCHMARK_H
+
+#include <stdbool.h>
 
 #include "mbx/opts.h"
 
-extern bool b;
-extern const char *str;
-extern int i;
-extern long l;
-extern float f;
-extern double d;
-extern struct mbx_opt opts[7];
+#define ARRAY_LENGTH(a) (sizeof(a) / sizeof(a[0]))
 
-#define ARRAY_LENGTH(x) (sizeof(x) / sizeof(*x))
+extern bool q, w, e, r, t, y;
+extern long u, i, o, p, a, s;
+extern double d, f, g, h, j, k;
+extern const char *l, *z, *x, *c, *v, *b;
 
-void test_print();
+extern struct mbx_opt opt[];
+extern const int optc;
 
-#endif // TEST_H
+void callback(const void *const ctx);
+bool validate(const char *const str, const void *const ctx);
+
+void print_shorthand();
+void print_longhand();
+
+#endif // BENCHMARK_H

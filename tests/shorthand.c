@@ -3,20 +3,20 @@
 int main() {
   // clang-format off
   const char *argv[] = {
-    "./app/path",
-    "-b",
-    "-s", "a_str",
-    "-i1",
-    "-l", "1234567890",
-    "-f", "1.234567",
-    "-d1.234567",
-    "-c"
+    "shorthand",
+    "-q",
+    "-u1",
+    "-i", "2",
+    "-d1.0",
+    "-f", "2.0",
+    "-lString1",
+    "-z", "String2"
   };
   // clang-format on
 
-  struct mbx_opts app = {.desc = "shorthand test"};
+  static struct mbx_opts app = {.desc = "shorthand test"};
 
-  if (!mbx_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
+  if (!mbx_opts_init(&app, optc, opt)) {
     return 1;
   }
 
@@ -24,5 +24,7 @@ int main() {
     return 2;
   }
 
-  test_print();
+  print_shorthand();
+
+  return 0;
 }

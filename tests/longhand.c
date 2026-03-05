@@ -3,20 +3,20 @@
 int main() {
   // clang-format off
   const char *argv[] = {
-    "./app/path",
-    "--boolean",
-    "--string=a_str",
-    "--integer", "1",
-    "--long", "1234567890l",
-    "--float", "1.234567",
-    "--double", "1.234567",
-    "--callback"
+    "longhand",
+    "--r",
+    "--p=1",
+    "--a", "2",
+    "--h=1.0",
+    "--j", "2.0",
+    "--c=String1",
+    "--v", "String2"
   };
   // clang-format on
 
-  struct mbx_opts app = {.desc = "longhand test"};
+  static struct mbx_opts app = {.desc = "longhand test"};
 
-  if (!mbx_opts_init(&app, opts, sizeof(opts) / sizeof(opts[0]))) {
+  if (!mbx_opts_init(&app, optc, opt)) {
     return 1;
   }
 
@@ -24,7 +24,7 @@ int main() {
     return 2;
   }
 
-  test_print();
+  print_longhand();
 
   return 0;
 }
