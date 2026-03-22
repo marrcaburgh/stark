@@ -12,7 +12,7 @@ extern long u, i, o, p, a, s;
 extern double d, f, g, h, j, k;
 extern const char *l, *z, *x, *c, *v, *b;
 
-extern struct mbx_opt opt[];
+extern struct mbx_opt optv[];
 extern const int optc;
 
 void callback(const void *const ctx);

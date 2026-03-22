@@ -13,32 +13,22 @@
 #define MBX_OPT_UNKNOWN 2
 #define MBX_OPT_ASSIGN_FAILED 1
 
-MB_COLD static void error(const char *const errstr, ...) {
-  va_list ap;
-
-  va_start(ap, errstr);
-  fprintf(stderr, "mb_opts error: ");
-  vfprintf(stderr, errstr, ap);
-  fprintf(stderr, "\n");
-  va_end(ap);
-}
-
 static void usage(const struct mbx_opt *const restrict opt) {
   // TODO: print usage
 }
 
-static void help(struct mbx_opts *const restrict app) {
+static void help(struct mbx_opts *const restrict opts) {
   // TODO: print help
 }
 
 MB_HOT __attribute__((always_inline)) static inline bool
-assign_opt(struct mbx_opts *const restrict app,
+assign_opt(struct mbx_opts *const restrict opts,
            const struct mbx_opt *const restrict opt) {
-  uint32_t base_type = opt->type & MBX_OPT_TYPE_MASK;
+  uint16_t base_type = opt->type & MBX_OPT_TYPE_MASK;
 
   switch (base_type) {
   case MBX_OPT_TYPE_HELP:
-    help(app);
+    help(opts);
 
     break;
   case MBX_OPT_TYPE_CALLBACK:
@@ -52,24 +42,32 @@ assign_opt(struct mbx_opts *const restrict app,
   default: {
     const char *str;
 
-    if (app->_token != NULL && *app->_token != '\0') {
-      str = app->_token;
-      app->_token = NULL;
-    } else if (app->_argc > 1) {
-      app->_argc--;
-      app->_argv++;
-      str = *app->_argv;
+    if (opt->type & MBX_OPT_MOD_POSITIONAL) {
+      str = *opts->_argv;
+      goto pos_skip;
+    }
+
+    if (opts->_token != NULL && *opts->_token != '\0') {
+      str = opts->_token;
+      opts->_token = NULL;
+    } else if (opts->_argc > 1) {
+      opts->_argc--;
+      opts->_argv++;
+      str = *opts->_argv;
     } else {
       fprintf(stderr, "no value provided: '%s'\n",
-              app->_token != NULL ? app->_token : *app->_argv);
+              opts->_token != NULL ? opts->_token : *opts->_argv);
 
       return false;
     }
 
+  pos_skip:
     if (opt->assign != NULL) {
       if (!opt->assign(str, opt->dest)) {
         return false;
       }
+    } else if (base_type == MBX_OPT_TYPE_STR) {
+      *(const char **)opt->dest = str;
     } else {
       char *endptr = NULL;
       union {
@@ -85,21 +83,17 @@ assign_opt(struct mbx_opts *const restrict app,
         val.d = strtod(str, &endptr);
       }
 
-      if (unlikely(endptr == str)) {
+      if (endptr == str) {
         fprintf(stderr, "not a number: '%s'\n", str);
 
         return false;
-      } else if (unlikely(errno == ERANGE)) {
+      } else if (errno == ERANGE) {
         fprintf(stderr, "out of range: '%s'\n", str);
 
         return false;
       }
 
       switch (base_type) {
-      case MBX_OPT_TYPE_STR:
-        *(const char **)opt->dest = str;
-
-        break;
       case MBX_OPT_TYPE_INT:
         if (val.l > INT_MAX || val.l < INT_MIN) {
           fprintf(stderr, "integer out of range: '%s'\n", str);
@@ -120,8 +114,6 @@ assign_opt(struct mbx_opts *const restrict app,
         break;
       case MBX_OPT_TYPE_DBL:
         *(double *)opt->dest = val.d;
-
-        break;
       default:
         break;
       }
@@ -160,15 +152,15 @@ static inline uint32_t hash_n(const char *restrict str, const size_t n) {
 }
 
 MB_HOT __attribute__((always_inline)) static inline int
-match_longhand(struct mbx_opts *const restrict app) {
+match_longhand(struct mbx_opts *const restrict opts) {
   const struct mbx_opt *restrict o;
-  const char *const restrict token = app->_token;
+  const char *const restrict token = opts->_token;
   const char *const restrict eq = strchr(token, '=');
   const size_t t_len = eq != NULL ? (size_t)(eq - token) : strlen(token);
   size_t i = hash_n(token, t_len) & (MB_LH_LUT_SIZE - 1);
 
   while (true) {
-    o = app->_lh_lut[i];
+    o = opts->_lh_lut[i];
 
     if (o == NULL) {
       return MBX_OPT_UNKNOWN;
@@ -203,24 +195,25 @@ match_longhand(struct mbx_opts *const restrict app) {
     i = (i + 1) & (MB_LH_LUT_SIZE - 1);
   }
 
-  app->_token = eq != NULL ? (eq + 1) : NULL;
-  return assign_opt(app, o) ? 0 : 1;
+  opts->_token = eq != NULL ? (eq + 1) : NULL;
+  return assign_opt(opts, o) ? 0 : 1;
 }
 
 MB_HOT __attribute__((always_inline)) static inline int
-match_shorthand(struct mbx_opts *const restrict app, const bool combined) {
+match_shorthand(struct mbx_opts *const restrict opts) {
   const struct mbx_opt *restrict o;
+  const bool combined = opts->_token[1] != '\0';
 
-  while (app->_token != NULL) {
-    o = app->_sh_lut[(unsigned char)*app->_token];
+  while (opts->_token != NULL) {
+    o = opts->_sh_lut[(unsigned char)*opts->_token];
 
     if (unlikely(o == NULL)) {
       return MBX_OPT_UNKNOWN;
     }
 
-    app->_token = app->_token[1] != '\0' ? app->_token + 1 : NULL;
+    opts->_token = opts->_token[1] != '\0' ? &opts->_token[1] : NULL;
 
-    if (!assign_opt(app, o)) {
+    if (!assign_opt(opts, o)) {
       return MBX_OPT_ASSIGN_FAILED;
     }
 
@@ -232,6 +225,16 @@ match_shorthand(struct mbx_opts *const restrict app, const bool combined) {
   return 0;
 }
 
+MB_COLD static void error(const char *const errstr, ...) {
+  va_list ap;
+
+  va_start(ap, errstr);
+  fprintf(stderr, "mbx_opts error: ");
+  vfprintf(stderr, errstr, ap);
+  fprintf(stderr, "\n");
+  va_end(ap);
+}
+
 MB_COLD static bool require(const struct mbx_opt *const restrict opt) {
   uint32_t base_type = opt->type & MBX_OPT_TYPE_MASK;
   const char *kind = base_type == MBX_OPT_TYPE_CALLBACK ? "callback " : "";
@@ -240,14 +243,18 @@ MB_COLD static bool require(const struct mbx_opt *const restrict opt) {
 
   if (opt->longhand != NULL) {
     error("%soption '--%s' must have %s", kind, opt->longhand, target);
+
+    return false;
   } else if (opt->shorthand != '\0') {
     error("%soption '-%c' must have %s", kind, opt->shorthand, target);
+
+    return false;
   }
 
-  return false;
+  return true;
 }
 
-MB_COLD static bool lh_lut_push(struct mbx_opts *const restrict app,
+MB_COLD static bool lh_lut_push(struct mbx_opts *const restrict opts,
                                 struct mbx_opt *const restrict opt,
                                 const bool is_alias) {
   bool ok = true;
@@ -256,8 +263,8 @@ MB_COLD static bool lh_lut_push(struct mbx_opts *const restrict app,
   const char *const restrict str = is_alias ? opt->alias : opt->longhand;
   size_t i = hash(str) & (MB_LH_LUT_SIZE - 1);
 
-  while (app->_lh_lut[i] != NULL) {
-    const struct mbx_opt *prev = app->_lh_lut[i];
+  while (opts->_lh_lut[i] != NULL) {
+    const struct mbx_opt *prev = opts->_lh_lut[i];
     const char *prev_same = is_alias ? prev->alias : prev->longhand;
     const char *prev_other = is_alias ? prev->longhand : prev->alias;
 
@@ -274,23 +281,24 @@ MB_COLD static bool lh_lut_push(struct mbx_opts *const restrict app,
     i = (i + 1) & (MB_LH_LUT_SIZE - 1);
   }
 
-  app->_lh_lut[i] = opt;
+  opts->_lh_lut[i] = opt;
   return ok;
 }
 
-MB_COLD static bool populate_longhand_lut(struct mbx_opts *const restrict app,
+MB_COLD static bool populate_longhand_lut(struct mbx_opts *const restrict opts,
                                           struct mbx_opt *const restrict opt) {
   bool ok = true;
   uint8_t long_len = 0;
   uint8_t alias_len = 0;
 
   if (opt->longhand != NULL) {
-    ok &= lh_lut_push(app, opt, false);
+    ok &= lh_lut_push(opts, opt, false);
     long_len = strlen(opt->longhand);
   }
 
   if (opt->alias != NULL) {
-    ok &= lh_lut_push(app, opt, true);
+    ok &= lh_lut_push(opts, opt, true);
+    alias_len = strlen(opt->alias);
   }
 
   opt->lens = ((long_len > 15 ? 0xF : long_len) << 4) |
@@ -316,14 +324,17 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
   }
 
   bool ok = true;
+  uint8_t posc = 0;
 
   memset(opts->_sh_lut, 0, sizeof(opts->_sh_lut));
   memset(opts->_lh_lut, 0, sizeof(opts->_lh_lut));
 
   for (int i = 0; i < optc; i++) {
     struct mbx_opt *const o = &optv[i];
+    const enum mbx_opt_type base_type = o->type & MBX_OPT_TYPE_MASK;
+    bool pos = false;
 
-    switch (o->type & MBX_OPT_TYPE_MASK) {
+    switch (base_type) {
     case MBX_OPT_TYPE_CUSTOM:
     case MBX_OPT_TYPE_STR:
     case MBX_OPT_TYPE_DBL:
@@ -335,9 +346,13 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
         ok = false;
       }
 
+      if (o->type & MBX_OPT_MOD_POSITIONAL) {
+        pos = true;
+      }
+
       break;
     case MBX_OPT_TYPE_CALLBACK:
-      if (o->assign) {
+      if (o->assign != NULL) {
         error("assigners cannot be paired with actions");
 
         ok = false;
@@ -348,6 +363,9 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
       }
 
       break;
+    case MBX_OPT_TYPE_SUBCOMMAND:
+      pos = true;
+      break;
     case MBX_OPT_TYPE_HELP:
       break;
     default:
@@ -356,8 +374,10 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
       ok = false;
     }
 
-    if (o->shorthand == '\0' && o->longhand == NULL) {
-      error("options must have either a shorthand or longhand");
+    if (pos) {
+      goto positional;
+    } else if (o->shorthand == '\0' && o->longhand == NULL) {
+      error("non-positonal options must have either a shorthand or longhand");
 
       ok = false;
     }
@@ -376,37 +396,66 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
 
   longhand:
     ok &= populate_longhand_lut(opts, o);
+    continue;
+
+  positional:
+    o->lens = strlen(o->longhand);
+    opts->_pos_lut[posc++] = o;
   }
+
+  opts->posc = posc;
 
   return opts->_verified = ok;
 }
 
-MB_COLD bool mbx_opts_parse(struct mbx_opts *const restrict app, const int argc,
-                            const char **const argv) {
-  if (!app->_verified) {
-    error("not verified, did you forget 'mb_opts_init'?");
+MB_COLD bool mbx_opts_parse(struct mbx_opts *const restrict opts,
+                            const int argc, const char **const restrict argv) {
+  if (!opts->_verified) {
+    error("not verified, did you forget 'mbx_opts_init'?");
 
     return false;
   }
 
-  app->_argc = argc - 1;
-  app->_argv = argv + 1;
+  opts->_argc = argc - 1;
+  opts->_argv = argv + 1;
 
-  for (; app->_argc != 0; app->_argc--, app->_argv++) {
-    const char *arg = app->_argv[0];
+  uint8_t pos_idx = 0;
+
+  for (; opts->_argc != 0; opts->_argc--, opts->_argv++) {
+    const char *arg = *opts->_argv;
 
     if (arg == NULL || arg[0] == '\0') {
       continue;
     }
 
     if (arg[0] != '-' || arg[1] == '\0') {
+      const mbx_opt *const restrict o = opts->_pos_lut[pos_idx];
+
+      if (o == NULL) {
+        goto non_pos;
+      }
+
+      size_t arg_len = strlen(arg);
+
+      if ((o->type & MBX_OPT_TYPE_MASK) == MBX_OPT_TYPE_SUBCOMMAND &&
+          o->lens == arg_len &&
+          memcmp(arg, opts->_pos_lut[pos_idx]->longhand, o->lens) == 0) {
+        return mbx_opts_parse((struct mbx_opts *const restrict)o->ctx,
+                              opts->_argc, opts->_argv);
+      } else if (o->type & MBX_OPT_MOD_POSITIONAL && !assign_opt(opts, o)) {
+        return false;
+      } else {
+        pos_idx++;
+      }
+
+    non_pos:
       continue;
     }
 
     if (arg[1] != '-') {
-      app->_token = arg + 1;
+      opts->_token = arg + 1;
 
-      switch (match_shorthand(app, app->_token[1] != '\0')) {
+      switch (match_shorthand(opts)) {
       case 0:
         break;
       case MBX_OPT_ASSIGN_FAILED:
@@ -419,14 +468,14 @@ MB_COLD bool mbx_opts_parse(struct mbx_opts *const restrict app, const int argc,
     }
 
     if (arg[2] == '\0') {
-      app->_argc--;
-      app->_argv++;
+      opts->_argc--;
+      opts->_argv++;
       break;
     }
 
-    app->_token = arg + 2;
+    opts->_token = arg + 2;
 
-    switch (match_longhand(app)) {
+    switch (match_longhand(opts)) {
     case 0:
       break;
     case MBX_OPT_ASSIGN_FAILED:

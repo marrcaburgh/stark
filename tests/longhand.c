@@ -14,13 +14,13 @@ int main() {
   };
   // clang-format on
 
-  static struct mbx_opts app = {.desc = "longhand test"};
+  static struct mbx_opts opts = {.desc = "longhand test"};
 
-  if (!mbx_opts_init(&app, optc, opt)) {
+  if (!mbx_opts_init(&opts, optc, optv)) {
     return 1;
   }
 
-  if (!mbx_opts_parse(&app, ARRAY_LENGTH(argv), argv)) {
+  if (!mbx_opts_parse(&opts, ARRAY_LENGTH(argv), argv)) {
     return 2;
   }
 

@@ -19,14 +19,14 @@ int main() {
                                "-xstr2"};
 
   const int argc = sizeof(argv) / sizeof(argv[0]);
-  static struct mbx_opts app = {.desc = "benchmark-shorthand test"};
+  static struct mbx_opts opts = {.desc = "benchmark-shorthand test"};
 
-  if (!mbx_opts_init(&app, optc, opt)) {
+  if (!mbx_opts_init(&opts, optc, optv)) {
     return 1;
   }
 
   for (int i = 0; i < 100000000; i++) {
-    if (!mbx_opts_parse(&app, argc, argv)) {
+    if (!mbx_opts_parse(&opts, argc, argv)) {
       break;
     }
   }

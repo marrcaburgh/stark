@@ -1,6 +1,9 @@
 add_library(test test.c)
 target_link_libraries(test PUBLIC mbx_opts)
 
+add_executable(cli cli.c)
+target_link_libraries(cli PRIVATE test)
+
 add_executable(shorthand shorthand.c)
 target_link_libraries(shorthand PRIVATE test)
 

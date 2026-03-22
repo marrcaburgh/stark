@@ -13,9 +13,9 @@ benchmarks=(
   benchmark_longhand
   benchmark_longhand_equals
   benchmark_mixed
-  )
+)
 
 for benchmark in "${benchmarks[@]}"; do
-    printf "\n$benchmark:"
+    printf "\n$benchmark:\n"
     perf stat -d "$BUILD_DIR/$benchmark"
 done
