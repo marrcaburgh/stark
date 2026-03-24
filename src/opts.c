@@ -23,7 +23,7 @@ static void help(struct mbx_opts *const restrict opts) {
 
 MB_HOT __attribute__((always_inline)) static inline bool
 assign_opt(struct mbx_opts *const restrict opts,
-           const struct mbx_opt *const restrict opt) {
+           struct mbx_opt *const restrict opt) {
   uint16_t base_type = opt->type & MBX_OPT_TYPE_MASK;
 
   switch (base_type) {
@@ -35,12 +35,23 @@ assign_opt(struct mbx_opts *const restrict opts,
     opt->handler.callback(opt->ctx);
 
     break;
-  case MBX_OPT_TYPE_BOOL:
-    *(bool *)opt->dest = !*(bool *)opt->dest;
-
-    break;
   default: {
     const char *str;
+
+    if ((opt->type & MBX_OPT_TYPE_MASK) == MBX_OPT_TYPE_SUBCOMMAND) {
+      if (!mbx_opts_parse(opt->ctx, opts->_argc, opts->_argv)) {
+        return false;
+      }
+
+      opts->_argc = 0;
+      return true;
+    }
+
+    if ((opt->type & MBX_OPT_MOD_ARRAY) && ++opt->arrc > opt->arrl) {
+      fprintf(stderr, "array out bounds\n");
+
+      return false;
+    }
 
     if (opt->type & MBX_OPT_MOD_POSITIONAL) {
       str = *opts->_argv;
@@ -66,8 +77,21 @@ assign_opt(struct mbx_opts *const restrict opts,
       if (!opt->assign(str, opt->dest)) {
         return false;
       }
+
+    } else if (base_type == MBX_OPT_TYPE_BOOL) {
+      *(bool *)opt->dest = !*(bool *)opt->dest;
+
+      if (opt->type & MBX_OPT_MOD_ARRAY) {
+        opt->dest = (bool *)opt->dest + 1;
+      }
+
     } else if (base_type == MBX_OPT_TYPE_STR) {
       *(const char **)opt->dest = str;
+
+      if (opt->type & MBX_OPT_MOD_ARRAY) {
+        opt->dest = (const char **)opt->dest + 1;
+      }
+
     } else {
       char *endptr = NULL;
       union {
@@ -102,19 +126,31 @@ assign_opt(struct mbx_opts *const restrict opts,
         }
 
         *(int *)opt->dest = (int)val.l;
+        if (opt->type & MBX_OPT_MOD_ARRAY) {
+          opt->dest = (int *)opt->dest + 1;
+        }
 
         break;
       case MBX_OPT_TYPE_LONG:
         *(long *)opt->dest = val.l;
+        if (opt->type & MBX_OPT_MOD_ARRAY) {
+          opt->dest = (long *)opt->dest + 1;
+        }
 
         break;
       case MBX_OPT_TYPE_FLOAT:
         *(float *)opt->dest = (float)val.d;
+        if (opt->type & MBX_OPT_MOD_ARRAY) {
+          opt->dest = (float *)opt->dest + 1;
+        }
 
         break;
       case MBX_OPT_TYPE_DBL:
         *(double *)opt->dest = val.d;
-      default:
+        if (opt->type & MBX_OPT_MOD_ARRAY) {
+          opt->dest = (double *)opt->dest + 1;
+        }
+
         break;
       }
     }
@@ -153,11 +189,11 @@ static inline uint32_t hash_n(const char *restrict str, const size_t n) {
 
 MB_HOT __attribute__((always_inline)) static inline int
 match_longhand(struct mbx_opts *const restrict opts) {
-  const struct mbx_opt *restrict o;
+  struct mbx_opt *restrict o;
   const char *const restrict token = opts->_token;
   const char *const restrict eq = strchr(token, '=');
   const size_t t_len = eq != NULL ? (size_t)(eq - token) : strlen(token);
-  size_t i = hash_n(token, t_len) & (MB_LH_LUT_SIZE - 1);
+  size_t i = hash_n(token, t_len) & (MBX_OPTS_LH_LUT_SIZE - 1);
 
   while (true) {
     o = opts->_lh_lut[i];
@@ -192,16 +228,16 @@ match_longhand(struct mbx_opts *const restrict opts) {
     }
 
   next:
-    i = (i + 1) & (MB_LH_LUT_SIZE - 1);
+    i = (i + 1) & (MBX_OPTS_LH_LUT_SIZE - 1);
   }
 
   opts->_token = eq != NULL ? (eq + 1) : NULL;
-  return assign_opt(opts, o) ? 0 : 1;
+  return assign_opt(opts, o) ? 0 : MBX_OPT_ASSIGN_FAILED;
 }
 
 MB_HOT __attribute__((always_inline)) static inline int
 match_shorthand(struct mbx_opts *const restrict opts) {
-  const struct mbx_opt *restrict o;
+  struct mbx_opt *restrict o;
   const bool combined = opts->_token[1] != '\0';
 
   while (opts->_token != NULL) {
@@ -258,27 +294,28 @@ MB_COLD static bool lh_lut_push(struct mbx_opts *const restrict opts,
                                 struct mbx_opt *const restrict opt,
                                 const bool is_alias) {
   bool ok = true;
-  const char *const restrict kind = is_alias ? "alias" : "longhand";
-  const char *const restrict other_kind = is_alias ? "longhand" : "alias";
+  const char *const restrict type = is_alias ? "alias" : "longhand";
+  const char *const restrict other_type = is_alias ? "longhand" : "alias";
   const char *const restrict str = is_alias ? opt->alias : opt->longhand;
-  size_t i = hash(str) & (MB_LH_LUT_SIZE - 1);
+  size_t i = hash(str) & (MBX_OPTS_LH_LUT_SIZE - 1);
 
   while (opts->_lh_lut[i] != NULL) {
     const struct mbx_opt *prev = opts->_lh_lut[i];
-    const char *prev_same = is_alias ? prev->alias : prev->longhand;
-    const char *prev_other = is_alias ? prev->longhand : prev->alias;
+    const char *prev_type = is_alias ? prev->alias : prev->longhand;
+    const char *prev_other_type = is_alias ? prev->longhand : prev->alias;
 
-    if (prev_same != NULL && strcmp(prev_same, str) == 0) {
-      error("duplicate %s '--%s'", kind, str);
+    if (prev_type != NULL && strcmp(prev_type, str) == 0) {
+      error("duplicate %s '--%s'", type, str);
       ok = false;
     }
 
-    if (prev_other != NULL && strcmp(prev_other, str) == 0) {
-      error("%s '--%s' shadows %s '--%s'", kind, str, other_kind, prev_other);
+    if (prev_other_type != NULL && strcmp(prev_other_type, str) == 0) {
+      error("%s '--%s' shadows %s '--%s'", type, str, other_type,
+            prev_other_type);
       ok = false;
     }
 
-    i = (i + 1) & (MB_LH_LUT_SIZE - 1);
+    i = (i + 1) & (MBX_OPTS_LH_LUT_SIZE - 1);
   }
 
   opts->_lh_lut[i] = opt;
@@ -332,10 +369,14 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
   for (int i = 0; i < optc; i++) {
     struct mbx_opt *const o = &optv[i];
     const enum mbx_opt_type base_type = o->type & MBX_OPT_TYPE_MASK;
-    bool pos = false;
+    bool pos = false, subc = false;
 
     switch (base_type) {
     case MBX_OPT_TYPE_CUSTOM:
+      if (o->assign == NULL) {
+        error("custom options must have an assigner");
+        ok = false;
+      }
     case MBX_OPT_TYPE_STR:
     case MBX_OPT_TYPE_DBL:
     case MBX_OPT_TYPE_FLOAT:
@@ -353,7 +394,7 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
       break;
     case MBX_OPT_TYPE_CALLBACK:
       if (o->assign != NULL) {
-        error("assigners cannot be paired with actions");
+        error("assigners cannot be paired with callbacks");
 
         ok = false;
       }
@@ -364,7 +405,17 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
 
       break;
     case MBX_OPT_TYPE_SUBCOMMAND:
-      pos = true;
+      if (o->ctx == NULL) {
+        error("subcommands must have a context");
+
+        ok = false;
+      }
+
+      if (o->type & MBX_OPT_MOD_POSITIONAL) {
+        pos = true;
+        subc = true;
+      }
+
       break;
     case MBX_OPT_TYPE_HELP:
       break;
@@ -399,11 +450,13 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
     continue;
 
   positional:
-    o->lens = strlen(o->longhand);
+    if (subc) {
+      o->lens = strlen(o->longhand);
+    }
     opts->_pos_lut[posc++] = o;
   }
 
-  opts->posc = posc;
+  opts->_posc = posc;
 
   return opts->_verified = ok;
 }
@@ -416,39 +469,46 @@ MB_COLD bool mbx_opts_parse(struct mbx_opts *const restrict opts,
     return false;
   }
 
+  uint8_t pos_idx = 0;
+  bool greedy_pos = false;
+
   opts->_argc = argc - 1;
   opts->_argv = argv + 1;
 
-  uint8_t pos_idx = 0;
-
-  for (; opts->_argc != 0; opts->_argc--, opts->_argv++) {
+  for (; opts->_argc > 0; opts->_argc--, opts->_argv++) {
     const char *arg = *opts->_argv;
 
     if (arg == NULL || arg[0] == '\0') {
       continue;
     }
 
-    if (arg[0] != '-' || arg[1] == '\0') {
-      const mbx_opt *const restrict o = opts->_pos_lut[pos_idx];
-
-      if (o == NULL) {
-        goto non_pos;
+    if (greedy_pos || arg[0] != '-' || arg[1] == '\0') {
+      if (opts->_posc == 0 || pos_idx >= opts->_posc) {
+        goto unknown;
       }
 
-      size_t arg_len = strlen(arg);
+      mbx_opt *const restrict o = opts->_pos_lut[pos_idx];
 
-      if ((o->type & MBX_OPT_TYPE_MASK) == MBX_OPT_TYPE_SUBCOMMAND &&
-          o->lens == arg_len &&
-          memcmp(arg, opts->_pos_lut[pos_idx]->longhand, o->lens) == 0) {
-        return mbx_opts_parse((struct mbx_opts *const restrict)o->ctx,
-                              opts->_argc, opts->_argv);
-      } else if (o->type & MBX_OPT_MOD_POSITIONAL && !assign_opt(opts, o)) {
-        return false;
+      if ((o->type & MBX_OPT_TYPE_SUBCOMMAND)) {
+        size_t arg_len = strlen(arg);
+
+        if (!(o->lens == arg_len && memcmp(arg, o->longhand, o->lens) == 0)) {
+          goto unknown;
+        }
+      }
+
+      if (assign_opt(opts, o)) {
+        if (o->type & MBX_OPT_MOD_ARRAY) {
+          greedy_pos = true;
+        }
       } else {
+        return false;
+      }
+
+      if (!greedy_pos) {
         pos_idx++;
       }
 
-    non_pos:
       continue;
     }
 
@@ -470,6 +530,7 @@ MB_COLD bool mbx_opts_parse(struct mbx_opts *const restrict opts,
     if (arg[2] == '\0') {
       opts->_argc--;
       opts->_argv++;
+
       break;
     }
 

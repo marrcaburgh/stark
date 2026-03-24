@@ -25,38 +25,6 @@ extern "C" {
 #define MBX_OPTS_POS_LUT_SIZE 8
 #endif
 
-#define MBX_OPT(sh, lh, as, typ, dst, ass, val, usg)                           \
-  {                                                                            \
-      .shorthand = (sh),                                                       \
-      .longhand = (lh),                                                        \
-      .alias = (as),                                                           \
-      .type = (typ),                                                           \
-      .dest = (dst),                                                           \
-      .assign = (ass),                                                         \
-      .handler.validate = (val),                                               \
-      .usage = (usg),                                                          \
-  }
-
-#define MBX_OPT_CALLBACK(sh, lh, callback, context, usg)                       \
-  {.shorthand = (sh),                                                          \
-   .longhand = (lh),                                                           \
-   .type = MBX_OPT_TYPE_CALLBACK,                                              \
-   .handler.callback = (callback),                                             \
-   .ctx = (context),                                                           \
-   .usage = (usg)}
-
-#define MBX_OPT_POS(typ, dst, ass, val)                                        \
-  {.type = (typ) | MBX_OPT_POSITIONAL,                                         \
-   .dest = (dst),                                                              \
-   .assign = ass,                                                              \
-   .handler.validate = val}
-
-#define MBX_OPT_SUBCOMMAND(name, context)                                      \
-  {.longhand = (name), .type = (MBX_OPT_TYPE_SUBCOMMAND), .ctx = (context)}
-
-#define MBX_OPT_HELP                                                           \
-  {.shorthand = 'h', .longhand = "help", .type = MBX_OPT_TYPE_HELP}
-
 typedef void (*mbx_opt_callback)(const void *const restrict ctx);
 typedef bool (*mbx_opt_validator)(const void *const restrict val,
                                   const void *const restrict ctx);
@@ -90,14 +58,15 @@ enum mbx_opt_type {
 
 typedef struct mbx_opt {
   uint32_t const type;                 // 4 bytes
-  uint16_t const elem_size;            // 2 bytes
+  uint8_t arrc;                        // 1 byte
+  uint8_t const arrl;                  // 1 byte
   unsigned char const shorthand;       // 1 byte
   uint8_t lens;                        // 1 byte
   char const *const restrict longhand; // 8 bytes
   char const *const restrict alias;    // 8 bytes
-  void *const dest;                    // 8 bytes
+  void *dest;                          // 8 bytes
   mbx_opt_assigner const assign;       // 8 bytes
-  void const *const restrict ctx;      // 8 bytes
+  void *const restrict ctx;            // 8 bytes
   const union {
     mbx_opt_callback const callback;
     mbx_opt_validator const validate;
@@ -107,12 +76,12 @@ typedef struct mbx_opt {
 
 typedef struct mbx_opts {
   const char *_token;
-  const struct mbx_opt *_sh_lut[256];
-  const struct mbx_opt *_lh_lut[MBX_OPTS_LH_LUT_SIZE];
-  const struct mbx_opt *_pos_lut[MBX_OPTS_POS_LUT_SIZE];
+  struct mbx_opt *_sh_lut[256];
+  struct mbx_opt *_lh_lut[MBX_OPTS_LH_LUT_SIZE];
+  struct mbx_opt *_pos_lut[MBX_OPTS_POS_LUT_SIZE];
   const char **_argv;
   int _argc;
-  uint8_t posc;
+  uint8_t _posc;
   const char *const restrict desc;
   bool _verified;
 } mbx_opts;

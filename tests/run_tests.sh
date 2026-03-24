@@ -7,15 +7,10 @@ BUILD_DIR="./build/release/tests"
 "$BUILD_DIR/shorthand"
 printf "\n"
 "$BUILD_DIR/longhand"
+"$BUILD_DIR/positional"
 
-benchmarks=(
-  benchmark_shorthand
-  benchmark_longhand
-  benchmark_longhand_equals
-  benchmark_mixed
-)
-
-for benchmark in "${benchmarks[@]}"; do
+for f in ./tests/*.c; do
+    benchmark=$(basename "$f" .c)
     printf "\n$benchmark:\n"
     perf stat -d "$BUILD_DIR/$benchmark"
 done

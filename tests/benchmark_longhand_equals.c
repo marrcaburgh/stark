@@ -24,7 +24,9 @@ int main() {
 
   for (int i = 0; i < 100000000; i++) {
     if (!mbx_opts_parse(&opts, argc, argv)) {
-      break;
+      return 2;
     }
   }
+
+  return 0;
 }
