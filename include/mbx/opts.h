@@ -64,7 +64,7 @@ typedef struct mbx_opt {
   uint8_t lens;                        // 1 byte
   char const *const restrict longhand; // 8 bytes
   char const *const restrict alias;    // 8 bytes
-  void *dest;                          // 8 bytes
+  void *const restrict dest;           // 8 bytes
   mbx_opt_assigner const assign;       // 8 bytes
   void *const restrict ctx;            // 8 bytes
   const union {

@@ -47,12 +47,6 @@ assign_opt(struct mbx_opts *const restrict opts,
       return true;
     }
 
-    if ((opt->type & MBX_OPT_MOD_ARRAY) && ++opt->arrc > opt->arrl) {
-      fprintf(stderr, "array out bounds\n");
-
-      return false;
-    }
-
     if (opt->type & MBX_OPT_MOD_POSITIONAL) {
       str = *opts->_argv;
       goto pos_skip;
@@ -79,18 +73,10 @@ assign_opt(struct mbx_opts *const restrict opts,
       }
 
     } else if (base_type == MBX_OPT_TYPE_BOOL) {
-      *(bool *)opt->dest = !*(bool *)opt->dest;
-
-      if (opt->type & MBX_OPT_MOD_ARRAY) {
-        opt->dest = (bool *)opt->dest + 1;
-      }
+      *((bool *)opt->dest + opt->arrc) = !*((bool *)opt->dest + opt->arrc);
 
     } else if (base_type == MBX_OPT_TYPE_STR) {
-      *(const char **)opt->dest = str;
-
-      if (opt->type & MBX_OPT_MOD_ARRAY) {
-        opt->dest = (const char **)opt->dest + 1;
-      }
+      *((const char **)opt->dest + opt->arrc) = str;
 
     } else {
       char *endptr = NULL;
@@ -125,38 +111,32 @@ assign_opt(struct mbx_opts *const restrict opts,
           return false;
         }
 
-        *(int *)opt->dest = (int)val.l;
-        if (opt->type & MBX_OPT_MOD_ARRAY) {
-          opt->dest = (int *)opt->dest + 1;
-        }
+        *((int *)opt->dest + opt->arrc) = (int)val.l;
 
         break;
       case MBX_OPT_TYPE_LONG:
-        *(long *)opt->dest = val.l;
-        if (opt->type & MBX_OPT_MOD_ARRAY) {
-          opt->dest = (long *)opt->dest + 1;
-        }
+        *((long *)opt->dest + opt->arrc) = val.l;
 
         break;
       case MBX_OPT_TYPE_FLOAT:
-        *(float *)opt->dest = (float)val.d;
-        if (opt->type & MBX_OPT_MOD_ARRAY) {
-          opt->dest = (float *)opt->dest + 1;
-        }
+        *((float *)opt->dest + opt->arrc) = (float)val.d;
 
         break;
       case MBX_OPT_TYPE_DBL:
-        *(double *)opt->dest = val.d;
-        if (opt->type & MBX_OPT_MOD_ARRAY) {
-          opt->dest = (double *)opt->dest + 1;
-        }
+        *((double *)opt->dest + opt->arrc) = val.d;
 
         break;
       }
     }
 
     if (opt->handler.validate != NULL &&
-        !opt->handler.validate(opt->dest, opt->ctx)) {
+        !opt->handler.validate(opt->dest + opt->arrc, opt->ctx)) {
+      return false;
+    }
+
+    if ((opt->type & MBX_OPT_MOD_ARRAY) && ++opt->arrc > opt->arrl) {
+      fprintf(stderr, "array out bounds\n");
+
       return false;
     }
   }
