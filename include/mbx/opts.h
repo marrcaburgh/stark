@@ -18,6 +18,9 @@ extern "C" {
 #define MB_COLD
 #define MB_HOT
 #endif
+
+// To change the size of the corresponding longhand (LH) and positional (POS)
+// lookup tables, define these macros before including this header
 #ifndef MBX_OPTS_LH_LUT_SIZE
 #define MBX_OPTS_LH_LUT_SIZE 128
 #endif
@@ -49,7 +52,7 @@ enum mbx_opt_type {
   MBX_OPT_TYPE_SUBCOMMAND = 10,
 
   /* modifiers */
-  MBX_OPT_MOD_REQUIRED = 0x0100,
+  MBX_OPT_MOD_REQUIRED = 0x0100, // TODO: Implement
   MBX_OPT_MOD_ARRAY = 0x0200,
   MBX_OPT_MOD_POSITIONAL = 0x0400,
 
@@ -74,6 +77,8 @@ typedef struct mbx_opt {
   char const *const restrict usage; // 8 bytes
 } mbx_opt; // fits into one CPU L1 cache line or 64 bytes of memory
 
+// If you don't define a description (desc) then make sure to zero the struct.
+// using `= {0}`
 typedef struct mbx_opts {
   const char *_token;
   struct mbx_opt *_sh_lut[256];

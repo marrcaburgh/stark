@@ -52,6 +52,8 @@ assign_opt(struct mbx_opts *const restrict opts,
       goto pos_skip;
     }
 
+    // This is how you get `-i3` and '-i 3' to work properly, same with
+    // `--int=3` vs `--int 3`
     if (opts->_token != NULL && *opts->_token != '\0') {
       str = opts->_token;
       opts->_token = NULL;
@@ -103,6 +105,9 @@ assign_opt(struct mbx_opts *const restrict opts,
         return false;
       }
 
+      // The reason pointer math is used for assignment here is so that arrays
+      // can be assigned properly. For normal non-array options it just works
+      // normally (ptr + 0).
       switch (base_type) {
       case MBX_OPT_TYPE_INT:
         if (val.l > INT_MAX || val.l < INT_MIN) {
@@ -134,7 +139,9 @@ assign_opt(struct mbx_opts *const restrict opts,
       return false;
     }
 
-    if ((opt->type & MBX_OPT_MOD_ARRAY) && ++opt->arrc > opt->arrl) {
+    // Increment arrc first before checking if its an array so required options
+    // can be checked.
+    if (++opt->arrc > opt->arrl && (opt->type & MBX_OPT_MOD_ARRAY)) {
       fprintf(stderr, "array out bounds\n");
 
       return false;
@@ -318,6 +325,9 @@ MB_COLD static bool populate_longhand_lut(struct mbx_opts *const restrict opts,
     alias_len = strlen(opt->alias);
   }
 
+  // In the above branches strlen is used to precalculate lengths that are less
+  // than 15 so that strlen isn't called repeatedly for shorter options within
+  // match_longhand()
   opt->lens = ((long_len > 15 ? 0xF : long_len) << 4) |
               ((alias_len > 15 ? 0xF : alias_len));
 
@@ -342,9 +352,6 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
 
   bool ok = true;
   uint8_t posc = 0;
-
-  memset(opts->_sh_lut, 0, sizeof(opts->_sh_lut));
-  memset(opts->_lh_lut, 0, sizeof(opts->_lh_lut));
 
   for (int i = 0; i < optc; i++) {
     struct mbx_opt *const o = &optv[i];
@@ -426,6 +433,8 @@ MB_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts, const int optc,
     }
 
   longhand:
+    // &= is used here to set ok only if populate_longhand_lut() returned false,
+    // otherwise the state wouldnt be perserved across options
     ok &= populate_longhand_lut(opts, o);
     continue;
 
@@ -458,10 +467,13 @@ MB_COLD bool mbx_opts_parse(struct mbx_opts *const restrict opts,
   for (; opts->_argc > 0; opts->_argc--, opts->_argv++) {
     const char *arg = *opts->_argv;
 
+    // This is here to skip any invalid arguments the OS may have put into argv.
     if (arg == NULL || arg[0] == '\0') {
       continue;
     }
 
+    // The reason greedy_pos is here is to skip flag checking for array
+    // positionals or "greedy" ones
     if (greedy_pos || arg[0] != '-' || arg[1] == '\0') {
       if (opts->_posc == 0 || pos_idx >= opts->_posc) {
         goto unknown;
@@ -478,6 +490,9 @@ MB_COLD bool mbx_opts_parse(struct mbx_opts *const restrict opts,
       }
 
       if (assign_opt(opts, o)) {
+        // The reason this branch is here rather than just in the above if
+        // statement is because otherwise a failed assignment wouldn't fall
+        // through to the else block
         if (o->type & MBX_OPT_MOD_ARRAY) {
           greedy_pos = true;
         }
