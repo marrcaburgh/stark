@@ -218,7 +218,7 @@ match_longhand(struct mbx_opts *const restrict opts) {
   struct mbx_opt *restrict o;
   char const *const restrict token = opts->_token;
   char const *const restrict eq = strchr(token, '=');
-  size_t const t_len = eq != NULL ? (size_t)(eq - token) : strlen(token);
+  size_t const t_len = eq != NULL ? (size_t)(eq - token) : mbx_strlen(token);
   size_t i = hash_n(token, t_len) & (MBX_OPTS_LH_LUT_SIZE - 1);
   size_t probes = 0;
 
@@ -345,13 +345,13 @@ populate_longhand_lut(struct mbx_opts *const restrict opts,
                       struct mbx_opt *const restrict opt) {
   bool ok = true;
 
-  // strlen() is used here to precalculate lengths so that strlen is not called
-  // in the hot path. if the length is greater than 255, its still used as a
-  // fallback, but that is a very unlikely case.
+  // mbx_strlen() is used here to precalculate lengths so that mbx_strlen is not
+  // called in the hot path. if the length is greater than 255, its still used
+  // as a fallback, but that is a very unlikely case.
   if (opt->longhand != NULL) {
     ok &= lh_lut_push(opts, opt, false);
 
-    if ((opt->long_len = (uint8_t)strlen(opt->longhand)) > 63) {
+    if ((opt->long_len = (uint8_t)mbx_strlen(opt->longhand)) > 63) {
       error("longhand `--%s` exceeds max character limit of 63 characters",
             opt->longhand);
 
@@ -362,7 +362,7 @@ populate_longhand_lut(struct mbx_opts *const restrict opts,
   if (opt->alias != NULL) {
     ok &= lh_lut_push(opts, opt, true);
 
-    if ((opt->alias_len = (uint8_t)strlen(opt->alias)) > 63) {
+    if ((opt->alias_len = (uint8_t)mbx_strlen(opt->alias)) > 63) {
       error("alias `--%s` exceeds max character limit of 63 characters",
             opt->alias);
 
@@ -387,7 +387,7 @@ register_opt(struct mbx_opts *const restrict opts,
 
         ok = false;
       } else {
-        opt->long_len = strlen(opt->usage);
+        opt->long_len = mbx_strlen(opt->usage);
       }
     } else if (opt->type == MBX_OPT_TYPE_BOOL) {
       error("positional mod cannot be combined with boolean type");
@@ -538,7 +538,7 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
       struct mbx_opt *const restrict o = opts->_pos_lut[pos_idx];
 
       if (o->type == MBX_OPT_TYPE_SUBCOMMAND) {
-        size_t arg_len = strlen(arg);
+        size_t arg_len = mbx_strlen(arg);
 
         if (!(o->long_len == arg_len && mbx_bcmp(arg, o->usage, o->long_len))) {
           goto unknown;
