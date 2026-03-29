@@ -517,7 +517,7 @@ MBX_COLD bool mbx_opts_parse(struct mbx_opts *const restrict opts,
         size_t arg_len = strlen(arg);
 
         if (!(o->long_len == arg_len &&
-              memcmp(arg, o->usage, o->long_len) == 0)) {
+              bcmp(arg, o->usage, o->long_len) == 0)) {
           goto unknown;
         }
       }
