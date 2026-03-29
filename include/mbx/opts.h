@@ -1,5 +1,5 @@
 //
-// libmbx - C99+ utility library - mbx_opts - blazing-fast feature-full
+// libmbx - a C99+ utility library - mbx_opts - blazing-fast feature-full
 // command-line parser
 // Copyright (C) 2026  marrcaburgh
 //
@@ -21,22 +21,13 @@
 #ifndef MBX_OPTS_H
 #define MBX_OPTS_H
 
-#include <assert.h>
+#include "mbx/core.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-#define MBX_COLD __attribute__((cold))
-#define MBX_HOT __attribute__((hot, flatten, always_inline))
-#else
-#define MBX_COLD
-#define MBX_HOT
 #endif
 
 // To change the size of the corresponding longhand (LH) and positional (POS)
@@ -54,7 +45,9 @@ typedef bool (*mbx_opt_validator)(const void *const restrict val,
 typedef bool (*mbx_opt_assigner)(const char *const restrict str,
                                  void *const restrict dest, uint8_t const arrc);
 
-enum mbx_opt_type {
+typedef enum mbx_opts_err { MBX_OPTS_ERR_SUCCESS } mbx_opts_err;
+
+typedef enum mbx_opt_type {
   /* regular types */
   MBX_OPT_TYPE_BOOL = 1,
   MBX_OPT_TYPE_INT,
@@ -68,15 +61,15 @@ enum mbx_opt_type {
 
   /* special types */
   MBX_OPT_TYPE_SUBCOMMAND,
-};
+} mbx_opt_type;
 
-enum mbx_opt_mod {
+typedef enum mbx_opt_mod {
   MBX_OPT_MOD_ARRAY = 0x01,
   MBX_OPT_MOD_POSITIONAL = 0x02,
   MBX_OPT_MOD_REQUIRED = 0x04,
   MBX_OPT_MOD_HIDDEN = 0x08,
   MBX_OPT_FOUND = 0x10,
-};
+} mbx_opt_mod;
 
 typedef struct mbx_opt {
   uint8_t type;                        // 1 byte (4 bits free)
@@ -116,8 +109,8 @@ typedef struct mbx_opts {
 } mbx_opts;
 
 MBX_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts);
-MBX_COLD bool mbx_opts_parse(struct mbx_opts *const restrict app,
-                             int const argc, char const **const argv);
+bool mbx_opts_parse(struct mbx_opts *const restrict app, int const argc,
+                    char const **const argv);
 
 #ifdef __cplusplus
 }
