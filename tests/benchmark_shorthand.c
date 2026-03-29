@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 int main() {
-  static const char *argv[] = {"benchmark-shorthand",
+  static char const *argv[] = {"benchmark-shorthand",
                                "-q",
                                "-w",
                                "-e",
@@ -18,10 +18,11 @@ int main() {
                                "-zstr1",
                                "-xstr2"};
 
-  const int argc = sizeof(argv) / sizeof(argv[0]);
-  static struct mbx_opts opts = {.desc = "benchmark-shorthand test"};
+  int const argc = sizeof(argv) / sizeof(argv[0]);
+  struct mbx_opts opts = {
+      .desc = "benchmark-shorthand test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts, optc, optv)) {
+  if (!mbx_opts_init(&opts)) {
     return 1;
   }
 

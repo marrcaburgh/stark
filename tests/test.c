@@ -26,8 +26,6 @@ long u, i, o, p, a, s;
 double d, f, g, h, j, k;
 const char *l, *z, *x, *c, *v, *b;
 
-struct mbx_opts subcommand = {.desc = "subcommand"};
-
 struct mbx_opt optv[] = {
     {.type = MBX_OPT_TYPE_BOOL, .shorthand = 'q', .dest = &q},
     {.type = MBX_OPT_TYPE_BOOL, .shorthand = 'w', .dest = &w},
@@ -57,17 +55,16 @@ struct mbx_opt optv[] = {
     {.type = MBX_OPT_TYPE_STR, .longhand = "v", .dest = &v},
     {.type = MBX_OPT_TYPE_STR, .longhand = "b", .dest = &b},
 
-    {.type = MBX_OPT_TYPE_CALLBACK,
-     .shorthand = 'n',
-     .longhand = "callback",
-     .handler.callback = callback},
+    {.shorthand = 'n', .longhand = "callback", .handler.callback = callback},
 
     {.type = MBX_OPT_TYPE_SUBCOMMAND,
      .longhand = "subcommand",
      .ctx = &subcommand},
-    {.type = MBX_OPT_TYPE_LONG | MBX_OPT_MOD_POSITIONAL, .dest = &u},
-    {.type = MBX_OPT_TYPE_DBL | MBX_OPT_MOD_POSITIONAL, .dest = &d},
-    {.type = MBX_OPT_TYPE_STR | MBX_OPT_MOD_POSITIONAL, .dest = &l},
+    {.type = MBX_OPT_TYPE_LONG, .mods = MBX_OPT_MOD_POSITIONAL, .dest = &u},
+    {.type = MBX_OPT_TYPE_DBL, .mods = MBX_OPT_MOD_POSITIONAL, .dest = &d},
+    {.type = MBX_OPT_TYPE_STR, .mods = MBX_OPT_MOD_POSITIONAL, .dest = &l},
 };
 
-const int optc = ARRAY_LENGTH(optv);
+int const optc = ARRAY_LENGTH(optv);
+
+struct mbx_opts subcommand = {.desc = "subcommand", .optc = optc, .optv = optv};

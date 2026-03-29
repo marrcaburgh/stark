@@ -14,9 +14,9 @@ int main() {
   };
   // clang-format on
 
-  static struct mbx_opts opts = {.desc = "shorthand test"};
+  struct mbx_opts opts = {.desc = "shorthand test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts, optc, optv)) {
+  if (!mbx_opts_init(&opts)) {
     return 1;
   }
 

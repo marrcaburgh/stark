@@ -5,22 +5,23 @@
 
 int main() {
   // clang-format off
-  const char *argv[] = {
+  char const *argv[] = {
       "positional",
       "--subcommand",
-      "-u", "3243232",
-      "-d", "3.3",
-      "-l", "Hello, World!",
+      "3243232",
+      "3.3",
+      "Hello, World!",
   };
   // clang-format on
 
-  static struct mbx_opts opts = {.desc = "positional test"};
+  struct mbx_opts opts = {
+      .desc = "positional test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts, optc, optv)) {
+  if (!mbx_opts_init(&opts)) {
     return 1;
   }
 
-  if (!mbx_opts_init(&subcommand, optc, optv)) {
+  if (!mbx_opts_init(&subcommand)) {
     return 2;
   }
 

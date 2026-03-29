@@ -2,7 +2,7 @@
 
 int main() {
   // clang-format off
-  static const char *argv[] = {"benchmark-longhand",
+  static char const *argv[] = {"benchmark-longhand",
                                "--r",
                                "--t",
                                "--y",
@@ -17,10 +17,11 @@ int main() {
                                "--b", "'str2'"};
   // clang-format on
 
-  const int argc = sizeof(argv) / sizeof(argv[0]);
-  static struct mbx_opts opts = {.desc = "benchmark-shorthand test"};
+  int const argc = sizeof(argv) / sizeof(argv[0]);
+  struct mbx_opts opts = {
+      .desc = "benchmark-shorthand test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts, optc, optv)) {
+  if (!mbx_opts_init(&opts)) {
     return 1;
   }
 

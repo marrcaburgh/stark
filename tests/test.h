@@ -10,11 +10,11 @@
 extern bool q, w, e, r, t, y;
 extern long u, i, o, p, a, s;
 extern double d, f, g, h, j, k;
-extern const char *l, *z, *x, *c, *v, *b;
+extern char const *l, *z, *x, *c, *v, *b;
 
 extern struct mbx_opts subcommand;
 extern struct mbx_opt optv[];
-extern const int optc;
+extern int const optc;
 
 void callback(const void *const ctx);
 bool validate(const char *const str, const void *const ctx);

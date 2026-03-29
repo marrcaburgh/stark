@@ -2,7 +2,7 @@
 
 int main() {
   // clang-format off
-  const char *argv[] = {
+  char const *argv[] = {
     "longhand",
     "--r",
     "--p=1",
@@ -14,9 +14,9 @@ int main() {
   };
   // clang-format on
 
-  static struct mbx_opts opts = {.desc = "longhand test"};
+  struct mbx_opts opts = {.desc = "longhand test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts, optc, optv)) {
+  if (!mbx_opts_init(&opts)) {
     return 1;
   }
 

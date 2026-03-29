@@ -1,9 +1,9 @@
 #include "test.h"
 
 int main(const int argc, const char **argv) {
-  mbx_opts opts = {.desc = "CLI test"};
+  struct mbx_opts opts = {.desc = "CLI test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts, optc, optv)) {
+  if (!mbx_opts_init(&opts)) {
     return 1;
   }
 

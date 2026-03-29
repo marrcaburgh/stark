@@ -1,7 +1,7 @@
 #include "test.h"
 
 int main() {
-  static const char *argv[] = {"benchmark-longhand-equals",
+  static char const *argv[] = {"benchmark-longhand-equals",
                                "--r",
                                "--t",
                                "--y",
@@ -15,10 +15,11 @@ int main() {
                                "--v='str1'",
                                "--b='str2'"};
 
-  const int argc = sizeof(argv) / sizeof(argv[0]);
-  static struct mbx_opts opts = {.desc = "benchmark-shorthand test"};
+  int const argc = sizeof(argv) / sizeof(argv[0]);
+  struct mbx_opts opts = {
+      .desc = "benchmark-shorthand test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts, optc, optv)) {
+  if (!mbx_opts_init(&opts)) {
     return 1;
   }
 
