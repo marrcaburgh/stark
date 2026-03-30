@@ -28,28 +28,26 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define MBX_OPT_UNKNOWN 2
 #define MBX_OPT_ASSIGN_FAILED 1
 
-MBX_COLD MBX_ALWAYS_INLINE static void
-usage(const struct mbx_opt *const restrict opt) {
+MBX_COLD MBX_ALWAYS_INLINE MBX_UNUSED static void
+usage(MBX_UNUSED const struct mbx_opt *const restrict opt) {
   // TODO: print usage
 }
 
 MBX_COLD MBX_ALWAYS_INLINE static void
-help(struct mbx_opts *const restrict opts) {
+help(MBX_UNUSED struct mbx_opts *const restrict opts) {
   // TODO: print help
 }
 
-MBX_HOT MBX_NOINLINE static bool
-run_subcommand(struct mbx_opts *const restrict opts,
-               struct mbx_opt *const restrict opt) {
+MBX_NOINLINE static bool run_subcommand(struct mbx_opts *const restrict opts,
+                                        struct mbx_opt *const restrict opt) {
   return mbx_opts_parse(opt->ctx, opts->_argc, opts->_argv);
 }
 
-MBX_HOT MBX_ALWAYS_INLINE static inline bool
+MBX_ALWAYS_INLINE static inline bool
 assign_opt(struct mbx_opts *const restrict opts,
            struct mbx_opt *const restrict opt) {
   opt->mods |= MBX_OPT_FOUND;
@@ -86,9 +84,9 @@ assign_opt(struct mbx_opts *const restrict opts,
 
     if (opt->mods & MBX_OPT_MOD_POSITIONAL) {
       str = *opts->_argv;
-      goto skip_next;
+      goto assign_opt_skip_next;
     } else if (opt->type == MBX_OPT_TYPE_BOOL) {
-      goto skip_next;
+      goto assign_opt_skip_next;
     }
 
     // This is how you get `-i3` and '-i 3' to work properly, same with
@@ -107,7 +105,7 @@ assign_opt(struct mbx_opts *const restrict opts,
       return false;
     }
 
-  skip_next:
+  assign_opt_skip_next:
     if (opt->assign != NULL) {
       if (!opt->assign(str, opt->dest, opt->arrc)) {
         return false;
@@ -120,11 +118,11 @@ assign_opt(struct mbx_opts *const restrict opts,
       *(((char const **)opt->dest) + opt->arrc) = str;
       val_ptr = ((char const **)opt->dest) + opt->arrc;
     } else {
-      char *endptr = NULL;
       union {
         long l;
         double d;
       } val;
+      char *endptr = NULL;
       errno = 0;
 
       if (opt->type == MBX_OPT_TYPE_INT || opt->type == MBX_OPT_TYPE_LONG) {
@@ -213,11 +211,11 @@ static inline uint32_t hash_n(const char *restrict str, size_t const n) {
   return h;
 }
 
-MBX_HOT MBX_ALWAYS_INLINE MBX_FLATTEN static inline int
+MBX_ALWAYS_INLINE MBX_FLATTEN static inline int
 match_longhand(struct mbx_opts *const restrict opts) {
   struct mbx_opt *restrict o;
   char const *const restrict token = opts->_token;
-  char const *const restrict eq = strchr(token, '=');
+  char const *const restrict eq = mbx_strchr(token, '=');
   size_t const t_len = eq != NULL ? (size_t)(eq - token) : mbx_strlen(token);
   size_t i = hash_n(token, t_len) & (MBX_OPTS_LH_LUT_SIZE - 1);
   size_t probes = 0;
@@ -244,10 +242,11 @@ match_longhand(struct mbx_opts *const restrict opts) {
   }
 
   opts->_token = eq != NULL ? eq + 1 : NULL;
+
   return assign_opt(opts, o) ? 0 : MBX_OPT_ASSIGN_FAILED;
 }
 
-MBX_HOT MBX_ALWAYS_INLINE MBX_FLATTEN static inline int
+MBX_ALWAYS_INLINE MBX_FLATTEN static inline int
 match_shorthand(struct mbx_opts *const restrict opts) {
   struct mbx_opt *restrict o;
   bool const combined = opts->_token[1] != '\0';
@@ -298,7 +297,7 @@ require(const struct mbx_opt *const restrict opt) {
   return true;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE static bool
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static bool
 lh_lut_push(struct mbx_opts *const restrict opts,
             struct mbx_opt *const restrict opt, bool const is_alias) {
   bool ok = true;
@@ -313,12 +312,12 @@ lh_lut_push(struct mbx_opts *const restrict opts,
     char const *prev_type = is_alias ? prev->alias : prev->longhand;
     char const *prev_other_type = is_alias ? prev->longhand : prev->alias;
 
-    if (prev_type != NULL && strcmp(prev_type, str) == 0) {
+    if (prev_type != NULL && mbx_strcmp(prev_type, str) == 0) {
       error("duplicate %s '--%s'", type, str);
       ok = false;
     }
 
-    if (prev_other_type != NULL && strcmp(prev_other_type, str) == 0) {
+    if (prev_other_type != NULL && mbx_strcmp(prev_other_type, str) == 0) {
       error("%s '--%s' shadows %s '--%s'", type, str, other_type,
             prev_other_type);
 
@@ -340,7 +339,7 @@ lh_lut_push(struct mbx_opts *const restrict opts,
   return ok;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE static bool
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static bool
 populate_longhand_lut(struct mbx_opts *const restrict opts,
                       struct mbx_opt *const restrict opt) {
   bool ok = true;
@@ -373,7 +372,7 @@ populate_longhand_lut(struct mbx_opts *const restrict opts,
   return ok;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE bool
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN bool
 register_opt(struct mbx_opts *const restrict opts,
              struct mbx_opt *const restrict opt) {
   bool ok = true;
@@ -414,7 +413,7 @@ register_opt(struct mbx_opts *const restrict opts,
   }
 
   if (opt->shorthand == '\0') {
-    goto longhand;
+    goto register_opt_longhand;
   }
 
   if (opts->_sh_lut[opt->shorthand] == NULL) {
@@ -425,11 +424,12 @@ register_opt(struct mbx_opts *const restrict opts,
     ok = false;
   }
 
-longhand:
+register_opt_longhand:
   return ok &= populate_longhand_lut(opts, opt);
 }
 
-MBX_COLD bool validate_opt(struct mbx_opt *const restrict opt) {
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN bool
+validate_opt(struct mbx_opt *const restrict opt) {
   if (opt->assign != NULL) {
     if (opt->dest == NULL && !require(opt)) {
       return false;
@@ -532,7 +532,7 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
     // positionals or "greedy" ones
     if (greedy_pos || arg[0] != '-' || arg[1] == '\0') {
       if (opts->_posc == 0 || pos_idx >= opts->_posc) {
-        goto unknown;
+        goto mbx_opts_parse_unknown_option;
       }
 
       struct mbx_opt *const restrict o = opts->_pos_lut[pos_idx];
@@ -541,7 +541,7 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
         size_t arg_len = mbx_strlen(arg);
 
         if (!(o->long_len == arg_len && mbx_bcmp(arg, o->usage, o->long_len))) {
-          goto unknown;
+          goto mbx_opts_parse_unknown_option;
         }
       }
 
@@ -572,7 +572,7 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
       case MBX_OPT_ASSIGN_FAILED:
         return false;
       case MBX_OPT_UNKNOWN:
-        goto unknown;
+        goto mbx_opts_parse_unknown_option;
       }
 
       continue;
@@ -593,12 +593,12 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
     case MBX_OPT_ASSIGN_FAILED:
       return false;
     case MBX_OPT_UNKNOWN:
-      goto unknown;
+      goto mbx_opts_parse_unknown_option;
     }
 
     continue;
 
-  unknown:
+  mbx_opts_parse_unknown_option:
     fprintf(stderr, "unknown option: %s\n", arg);
     return false;
   }

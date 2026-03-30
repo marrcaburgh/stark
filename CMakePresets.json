@@ -27,6 +27,7 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
         "CMAKE_C_FLAGS_RELEASE": "-O3 -march=native -DNDEBUG"
       }
     },
@@ -48,18 +49,32 @@
     }
   ],
   "buildPresets": [
-    { "name": "debug", "configurePreset": "debug" },
-    { "name": "release", "configurePreset": "release" },
-    { "name" : "release-no-tests", "configurePreset": "release-no-tests" }
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "release-no-tests",
+      "configurePreset": "release-no-tests"
+    }
   ],
   "workflowPresets": [
     {
       "name": "develop",
       "steps": [
-        { "type": "configure", "name": "debug" },
-        { "type": "build", "name": "debug" }
+        {
+          "type": "configure",
+          "name": "debug"
+        },
+        {
+          "type": "build",
+          "name": "debug"
+        }
       ]
     }
   ]
 }
-

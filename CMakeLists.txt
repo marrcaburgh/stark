@@ -10,7 +10,6 @@ add_library(mbx_core STATIC src/core.c)
 add_library(mbx_opts STATIC src/opts.c)
 
 target_include_directories(mbx_core PUBLIC include)
-target_include_directories(mbx_opts PUBLIC include)
 
 target_link_libraries(mbx_opts PUBLIC mbx_core)
 

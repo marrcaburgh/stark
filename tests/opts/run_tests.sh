@@ -9,7 +9,7 @@ printf "\n"
 "$BUILD_DIR/longhand"
 "$BUILD_DIR/positional"
 
-for f in ./tests/benchmark_*.c; do
+for f in ./tests/opts/benchmark_*.c; do
     benchmark=$(basename "$f" .c)
     printf "\n$benchmark:\n"
     perf stat -e cycles,instructions,cache-misses,branch-misses "$BUILD_DIR/$benchmark"

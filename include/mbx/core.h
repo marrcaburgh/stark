@@ -28,29 +28,126 @@ extern "C" {
 #include <stdbool.h>
 #include <stddef.h>
 
-#if defined(__GNUC__) || defined(__clang__)
+// ============================================================
+// C language macros
+// ============================================================
+
+#define MBX_STATIC_ASSERT(cond, msg) _Static_assert((cond), (msg))
+#define MBX_ALIGNOF(type) _Alignof(type)
+
+// ============================================================
+// Compiler detection
+// ============================================================
+
+#if defined(__clang__)
+#define MBX_COMPILER_CLANG 1
+#elif defined(__GNUC__)
+#define MBX_COMPILER_GCC 1
+#endif
+
+#if defined(MBX_COMPILER_CLANG) || defined(MBX_COMPILER_GCC)
+#define MBX_COMPILER_GCC_LIKE 1
+#endif
+
+// ============================================================
+// GCC/Clang macros
+// ============================================================
+
+#if defined(MBX_COMPILER_GCC_LIKE)
+
+// Inline assembly
+#define MBX_VOLATILE __volatile__
+#define MBX_ASM(...) __asm__(__VA_ARGS__)
+
+// Optimization hints
+#define MBX_HOT __attribute__((hot))
+#define MBX_COLD __attribute__((cold))
+#define MBX_FLATTEN __attribute__((flatten))
+#define MBX_ALWAYS_INLINE __attribute__((always_inline))
+#define MBX_NOINLINE __attribute__((noinline))
+
+// Purity
+#define MBX_PURE __attribute__((pure))
+#define MBX_CONST __attribute__((const))
+
+// Control flow
+#define MBX_NORETURN __attribute__((noreturn))
+
+// Diagnostics
+#define MBX_UNUSED __attribute__((unused))
+#define MBX_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#define MBX_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#define MBX_FALLTHROUGH __attribute__((fallthrough))
+
+// Nullability
+#define MBX_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+#define MBX_RETURNS_NONNULL __attribute__((returns_nonnull))
+
+// Memory
+#define MBX_MALLOC __attribute__((malloc))
+#define MBX_ALLOC_SIZE(n) __attribute__((alloc_size(n)))
+#define MBX_ALLOC_SIZE2(n, m) __attribute__((alloc_size(n, m)))
+#define MBX_ALLOC_ALIGN(n) __attribute__((alloc_align(n)))
+
+// Layout
+#define MBX_PACKED __attribute__((packed))
+#define MBX_ALIGNED(n) __attribute__((aligned(n)))
+
+// Linker
+#define MBX_SECTION(name) __attribute__((section(name)))
+#define MBX_WEAK __attribute__((weak))
+#define MBX_USED __attribute__((used))
+#define MBX_ALIAS(name) __attribute__((alias(name)))
+#define MBX_CONSTRUCTOR __attribute__((constructor))
+#define MBX_DESTRUCTOR __attribute__((destructor))
+#define MBX_VISIBILITY(v) __attribute__((visibility(v)))
 
 // Integer overflow
 #define MBX_ADD_OVERFLOW(a, b, r) __builtin_add_overflow((a), (b), (r))
 #define MBX_SUB_OVERFLOW(a, b, r) __builtin_sub_overflow((a), (b), (r))
 #define MBX_MUL_OVERFLOW(a, b, r) __builtin_mul_overflow((a), (b), (r))
+#define MBX_ADD_OVERFLOW_P(a, b) __builtin_add_overflow_p((a), (b))
+#define MBX_SUB_OVERFLOW_P(a, b) __builtin_sub_overflow_p((a), (b))
+#define MBX_MUL_OVERFLOW_P(a, b) __builtin_mul_overflow_p((a), (b))
+
 #define MBX_SADD_OVERFLOW(a, b, r) __builtin_sadd_overflow((a), (b), (r))
 #define MBX_SSUB_OVERFLOW(a, b, r) __builtin_ssub_overflow((a), (b), (r))
 #define MBX_SMUL_OVERFLOW(a, b, r) __builtin_smul_overflow((a), (b), (r))
+#define MBX_SADDL_OVERFLOW(a, b, r) __builtin_saddl_overflow((a), (b), (r))
+#define MBX_SSUBL_OVERFLOW(a, b, r) __builtin_ssubl_overflow((a), (b), (r))
+#define MBX_SMULL_OVERFLOW(a, b, r) __builtin_smull_overflow((a), (b), (r))
+#define MBX_SADDLL_OVERFLOW(a, b, r) __builtin_saddll_overflow((a), (b), (r))
+#define MBX_SSUBLL_OVERFLOW(a, b, r) __builtin_ssubll_overflow((a), (b), (r))
+#define MBX_SMULLL_OVERFLOW(a, b, r) __builtin_smulll_overflow((a), (b), (r))
+
 #define MBX_UADD_OVERFLOW(a, b, r) __builtin_uadd_overflow((a), (b), (r))
 #define MBX_USUB_OVERFLOW(a, b, r) __builtin_usub_overflow((a), (b), (r))
 #define MBX_UMUL_OVERFLOW(a, b, r) __builtin_umul_overflow((a), (b), (r))
+#define MBX_UADDL_OVERFLOW(a, b, r) __builtin_uaddl_overflow((a), (b), (r))
+#define MBX_USUBL_OVERFLOW(a, b, r) __builtin_usubl_overflow((a), (b), (r))
+#define MBX_UMULL_OVERFLOW(a, b, r) __builtin_umull_overflow((a), (b), (r))
+#define MBX_UADDLL_OVERFLOW(a, b, r) __builtin_uaddll_overflow((a), (b), (r))
+#define MBX_USUBLL_OVERFLOW(a, b, r) __builtin_usubll_overflow((a), (b), (r))
+#define MBX_UMULLL_OVERFLOW(a, b, r) __builtin_umulll_overflow((a), (b), (r))
 
 // Bit manipulation
 #define MBX_CLZ(x) __builtin_clz((x))
+#define MBX_CLZL(x) __builtin_clzl((x))
 #define MBX_CLZLL(x) __builtin_clzll((x))
 #define MBX_CTZ(x) __builtin_ctz((x))
+#define MBX_CTZL(x) __builtin_ctzl((x))
 #define MBX_CTZLL(x) __builtin_ctzll((x))
+#define MBX_CLRSB(x) __builtin_clrsb((x))
+#define MBX_CLRSBL(x) __builtin_clrsbl((x))
+#define MBX_CLRSBLL(x) __builtin_clrsbll((x))
 #define MBX_FFS(x) __builtin_ffs((x))
+#define MBX_FFSL(x) __builtin_ffsl((x))
 #define MBX_FFSLL(x) __builtin_ffsll((x))
 #define MBX_POPCOUNT(x) __builtin_popcount((x))
+#define MBX_POPCOUNTL(x) __builtin_popcountl((x))
 #define MBX_POPCOUNTLL(x) __builtin_popcountll((x))
 #define MBX_PARITY(x) __builtin_parity((x))
+#define MBX_PARITYL(x) __builtin_parityl((x))
 #define MBX_PARITYLL(x) __builtin_parityll((x))
 #define MBX_BSWAP16(x) __builtin_bswap16((x))
 #define MBX_BSWAP32(x) __builtin_bswap32((x))
@@ -82,6 +179,7 @@ extern "C" {
 #define MBX_CBRTL(x) __builtin_cbrtl((x))
 #define MBX_HYPOT(x, y) __builtin_hypot((x), (y))
 #define MBX_HYPOTF(x, y) __builtin_hypotf((x), (y))
+#define MBX_HYPOTL(x, y) __builtin_hypotl((x), (y))
 #define MBX_POW(x, y) __builtin_pow((x), (y))
 #define MBX_POWF(x, y) __builtin_powf((x), (y))
 #define MBX_POWL(x, y) __builtin_powl((x), (y))
@@ -102,6 +200,7 @@ extern "C" {
 #define MBX_LOG10F(x) __builtin_log10f((x))
 #define MBX_LOG10L(x) __builtin_log10l((x))
 #define MBX_LOG1P(x) __builtin_log1p((x))
+#define MBX_LOG1PF(x) __builtin_log1pf((x))
 #define MBX_CEIL(x) __builtin_ceil((x))
 #define MBX_CEILF(x) __builtin_ceilf((x))
 #define MBX_CEILL(x) __builtin_ceill((x))
@@ -165,6 +264,10 @@ extern "C" {
 #define MBX_INFL() __builtin_infl()
 #define MBX_NAN(n) __builtin_nan((n))
 #define MBX_NANF(n) __builtin_nanf((n))
+#define MBX_NANL(n) __builtin_nanl((n))
+#define MBX_NANS(n) __builtin_nans((n))
+#define MBX_NANSF(n) __builtin_nansf((n))
+#define MBX_NANSL(n) __builtin_nansl((n))
 
 // Floating point - complex
 #define MBX_CREAL(x) __builtin_creal((x))
@@ -191,10 +294,19 @@ extern "C" {
 
 // Control flow
 #define MBX_UNREACHABLE() __builtin_unreachable()
-#define MBX_PREFETCH(addr) __builtin_prefetch((addr))
+#define MBX_TRAP() __builtin_trap()
+#define MBX_DEBUGTRAP() __builtin_debugtrap()
 #define MBX_ASSUME(cond) __builtin_assume((cond))
 #define MBX_CONSTANT_P(x) __builtin_constant_p((x))
-#define MBX_TRAP() __builtin_trap()
+
+// Branch hints
+#define MBX_EXPECT_TRUE(x) __builtin_expect(!!(x), 1)
+#define MBX_EXPECT_FALSE(x) __builtin_expect(!!(x), 0)
+#define MBX_EXPECT(expr, val) __builtin_expect((expr), (val))
+
+// Prefetch
+#define MBX_PREFETCH(addr, rw, locality)                                       \
+  __builtin_prefetch((addr), (rw), (locality))
 
 // Alignment
 #define MBX_ASSUME_ALIGNED(p, align) __builtin_assume_aligned((p), (align))
@@ -202,39 +314,30 @@ extern "C" {
 // Type checking
 #define MBX_TYPES_COMPATIBLE(a, b) __builtin_types_compatible_p((a), (b))
 
+// Compile-time selection
+#define MBX_CHOOSE_EXPR(cond, a, b) __builtin_choose_expr((cond), (a), (b))
+
 // Object size
 #define MBX_OBJECT_SIZE(p, t) __builtin_object_size((p), (t))
+
+// Struct layout
+#define MBX_OFFSETOF(type, member) __builtin_offsetof(type, member)
 
 // Stack
 #define MBX_RETURN_ADDRESS(level) __builtin_return_address((level))
 #define MBX_FRAME_ADDRESS(level) __builtin_frame_address((level))
+#define MBX_EXTRACT_RETURN_ADDR(addr) __builtin_extract_return_addr((addr))
 
-// Handwritten wrappers
-#define MBX_EXPECT_TRUE(x) __builtin_expect(!!(x), 1)
-#define MBX_EXPECT_FALSE(x) __builtin_expect(!!(x), 0)
+// Stack allocation
+#define MBX_ALLOCA(n) __builtin_alloca((n))
 
-// Attributes
-#define MBX_HOT __attribute__((hot))
-#define MBX_COLD __attribute__((cold))
-#define MBX_FLATTEN __attribute__((flatten))
-#define MBX_ALWAYS_INLINE __attribute__((always_inline))
-#define MBX_NOINLINE __attribute__((noinline))
-#define MBX_PURE __attribute__((pure))
-#define MBX_CONST __attribute__((const))
-#define MBX_NORETURN __attribute__((noreturn))
-#define MBX_UNUSED __attribute__((unused))
-#define MBX_DEPRECATED(msg) __attribute__((deprecated(msg)))
-#define MBX_MALLOC __attribute__((malloc))
-#define MBX_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
-#define MBX_RETURNS_NONNULL __attribute__((returns_nonnull))
-#define MBX_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#define MBX_FALLTHROUGH __attribute__((fallthrough))
+// Instruction cache
+#define MBX_CLEAR_CACHE(begin, end) __builtin___clear_cache((begin), (end))
 
 #else
 
 // Fallbacks for unsupported compilers
-#define MBX_EXPECT_TRUE(x) (x)
-#define MBX_EXPECT_FALSE(x) (x)
+#define MBX_VOLATILE volatile
 #define MBX_HOT
 #define MBX_COLD
 #define MBX_FLATTEN
@@ -245,21 +348,50 @@ extern "C" {
 #define MBX_NORETURN
 #define MBX_UNUSED
 #define MBX_DEPRECATED(msg)
-#define MBX_MALLOC
-#define MBX_NONNULL(...)
-#define MBX_RETURNS_NONNULL
 #define MBX_WARN_UNUSED_RESULT
 #define MBX_FALLTHROUGH
+#define MBX_NONNULL(...)
+#define MBX_RETURNS_NONNULL
+#define MBX_MALLOC
+#define MBX_ALLOC_SIZE(n)
+#define MBX_ALLOC_SIZE2(n, m)
+#define MBX_ALLOC_ALIGN(n)
+#define MBX_PACKED
+#define MBX_ALIGNED(n)
+#define MBX_SECTION(name)
+#define MBX_WEAK
+#define MBX_USED
+#define MBX_ALIAS(name)
+#define MBX_CONSTRUCTOR
+#define MBX_DESTRUCTOR
+#define MBX_VISIBILITY(v)
+#define MBX_EXPECT_TRUE(x) (x)
+#define MBX_EXPECT_FALSE(x) (x)
+#define MBX_EXPECT(expr, val) (expr)
 
-#endif // GCC/Clang
+#endif // MBX_COMPILER_GCC_LIKE
 
 // ============================================================
 // Freestanding functions
 // ============================================================
 
-// Compare N bytes of p1 and p2 for equality
-MBX_HOT MBX_PURE bool mbx_bcmp(void const *p1, void const *p2, size_t n);
-MBX_HOT MBX_CONST size_t mbx_strlen(char const *str);
+// Compare N bytes of a and b for equality
+MBX_HOT MBX_PURE bool mbx_bcmp(void const *const p1, void const *const p2,
+                               size_t n);
+
+// Compare N bytes of a and b, returning the signed difference of the first
+// mismatching bytes
+MBX_HOT MBX_PURE int mbx_memcmp(void const *const p1, void const *const p2,
+                                size_t n);
+
+// Compute the length of a null-terminated string
+MBX_HOT MBX_PURE size_t mbx_strlen(char const *str);
+
+// Find the first occurrence of character c in string s
+MBX_HOT MBX_PURE char const *mbx_strchr(char const *str, char const c);
+
+// Compare two null-terminated strings lexicographically
+MBX_HOT MBX_PURE int mbx_strcmp(char const *s1, char const *s2);
 
 #ifdef __cplusplus
 }
