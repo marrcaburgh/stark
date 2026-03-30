@@ -21,25 +21,19 @@
 #ifndef MBX_CORE_H
 #define MBX_CORE_H
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdbool.h>
-#include <stddef.h>
-
-// ============================================================
-// C language macros
-// ============================================================
-
-#define MBX_STATIC_ASSERT(cond, msg) _Static_assert((cond), (msg))
-#define MBX_ALIGNOF(type) _Alignof(type)
 
 // ============================================================
 // Compiler detection
 // ============================================================
 
-#if defined(__clang__)
+#ifdef __clang__
 #define MBX_COMPILER_CLANG 1
 #elif defined(__GNUC__)
 #define MBX_COMPILER_GCC 1
@@ -53,7 +47,7 @@ extern "C" {
 // GCC/Clang macros
 // ============================================================
 
-#if defined(MBX_COMPILER_GCC_LIKE)
+#ifdef MBX_COMPILER_GCC_LIKE
 
 // Inline assembly
 #define MBX_VOLATILE __volatile__
@@ -292,6 +286,11 @@ extern "C" {
 #define MBX_MEMSET(dst, val, n) __builtin_memset((dst), (val), (n))
 #define MBX_MEMCMP(a, b, n) __builtin_memcmp((a), (b), (n))
 
+// Strings
+#define MBX_STRLEN(s) __builtin_strlen((s))
+#define MBX_STRCHR(s, c) (char const *)__builtin_strchr((s), (c))
+#define MBX_STRCMP(s1, s2) __builtin_strcmp((s1), (s2))
+
 // Control flow
 #define MBX_UNREACHABLE() __builtin_unreachable()
 #define MBX_TRAP() __builtin_trap()
@@ -302,7 +301,6 @@ extern "C" {
 // Branch hints
 #define MBX_EXPECT_TRUE(x) __builtin_expect(!!(x), 1)
 #define MBX_EXPECT_FALSE(x) __builtin_expect(!!(x), 0)
-#define MBX_EXPECT(expr, val) __builtin_expect((expr), (val))
 
 // Prefetch
 #define MBX_PREFETCH(addr, rw, locality)                                       \
@@ -319,9 +317,6 @@ extern "C" {
 
 // Object size
 #define MBX_OBJECT_SIZE(p, t) __builtin_object_size((p), (t))
-
-// Struct layout
-#define MBX_OFFSETOF(type, member) __builtin_offsetof(type, member)
 
 // Stack
 #define MBX_RETURN_ADDRESS(level) __builtin_return_address((level))
@@ -353,9 +348,6 @@ extern "C" {
 #define MBX_NONNULL(...)
 #define MBX_RETURNS_NONNULL
 #define MBX_MALLOC
-#define MBX_ALLOC_SIZE(n)
-#define MBX_ALLOC_SIZE2(n, m)
-#define MBX_ALLOC_ALIGN(n)
 #define MBX_PACKED
 #define MBX_ALIGNED(n)
 #define MBX_SECTION(name)
@@ -364,34 +356,122 @@ extern "C" {
 #define MBX_ALIAS(name)
 #define MBX_CONSTRUCTOR
 #define MBX_DESTRUCTOR
-#define MBX_VISIBILITY(v)
 #define MBX_EXPECT_TRUE(x) (x)
 #define MBX_EXPECT_FALSE(x) (x)
-#define MBX_EXPECT(expr, val) (expr)
+
+static inline void __mbx_memcpy(void *dst, void const *src, size_t n) {
+  uint8_t const *s = (uint8_t const *)src;
+
+  for (uint8_t *d = dst; n-- > 0; *d++ = *s++)
+    ;
+}
+
+#define MBX_MEMCPY(dst, src, n) __mbx_memcpy((dst), (src), (n))
+
+static inline void __mbx_memmove(void *dst, void const *src, size_t n) {
+  uint8_t *d = dst;
+  uint8_t const *s = src;
+
+  if (d < s) {
+    for (; n-- > 0; *d++ = *s++)
+      ;
+  } else {
+    d += n;
+    s += n;
+
+    for (; n-- > 0; *--d = *--s)
+      ;
+  }
+}
+
+#define MBX_MEMMOVE(dst, src, n) __mbx_memmove((dst), (src), (n))
+
+static inline void __mbx_memset(void *dst, int val, size_t n) {
+  for (uint8_t *d = dst; n-- > 0; *d++ = (uint8_t)val)
+    ;
+}
+
+#define MBX_MEMSET(dst, val, n) __mbx_memset((dst), (val), (n))
+
+static inline int __mbx_memcmp(void const *p1, void const *p2, size_t n) {
+  uint8_t const *u1 = p1, *u2 = p2;
+
+  for (; n-- > 0; u1++, u2++) {
+    if (*u1 != *u2) {
+      return *u1 - *u2;
+    }
+  }
+
+  return 0;
+}
+
+#define MBX_MEMCMP(a, b, n) __mbx_memcmp((a), (b), (n))
+
+static inline size_t __mbx_strlen(char const *str) {
+  for (size_t len = 0;; len++) {
+    if (str[len] == '\0') {
+      return len;
+    }
+  }
+
+  return 0;
+}
+
+#define MBX_STRLEN(s) __mbx_strlen((s))
+
+static inline char const *__mbx_strchr(char const *str, char const c) {
+  for (; *str != '\0'; str++) {
+    if (*str == c) {
+      return str;
+    }
+  }
+
+  return NULL;
+}
+
+#define MBX_STRCHR(s, c) __mbx_strchr(s, c)
+
+static inline int __mbx_strcmp(char const *s1, char const *s2) {
+  uint8_t const *u1 = (uint8_t const *)s1, *u2 = (uint8_t const *)s2;
+
+  for (int d;; u1++, u2++) {
+    d = *u1 - *u2;
+
+    if (d != 0) {
+      return d;
+    } else if (*u1 == '\0') {
+      break;
+    }
+  }
+
+  return 0;
+}
+
+#define MBX_STRCMP(s1, s2) __mbx_strcmp(s1, s2)
 
 #endif // MBX_COMPILER_GCC_LIKE
 
 // ============================================================
-// Freestanding functions
+// C language macros
 // ============================================================
 
-// Compare N bytes of a and b for equality
-MBX_HOT MBX_PURE bool mbx_bcmp(void const *const p1, void const *const p2,
-                               size_t n);
-
-// Compare N bytes of a and b, returning the signed difference of the first
-// mismatching bytes
-MBX_HOT MBX_PURE int mbx_memcmp(void const *const p1, void const *const p2,
-                                size_t n);
-
-// Compute the length of a null-terminated string
-MBX_HOT MBX_PURE size_t mbx_strlen(char const *str);
-
-// Find the first occurrence of character c in string s
-MBX_HOT MBX_PURE char const *mbx_strchr(char const *str, char const c);
-
-// Compare two null-terminated strings lexicographically
-MBX_HOT MBX_PURE int mbx_strcmp(char const *s1, char const *s2);
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define MBX_STATIC_ASSERT(cond, msg) _Static_assert((cond), (msg))
+#define MBX_ALIGNOF(type) _Alignof(type)
+#else
+#define MBX_STATIC_ASSERT_CONCAT_(a, b) a##b
+#define MBX_STATIC_ASSERT_CONCAT(a, b) MBX_STATIC_ASSERT_CONCAT_(a, b)
+#define MBX_STATIC_ASSERT(cond, msg)                                           \
+  MBX_UNUSED typedef char MBX_STATIC_ASSERT_CONCAT(mbx_static_assert_,         \
+                                                   __LINE__)[(cond) ? 1 : -1]
+#define MBX_ALIGNOF(type)                                                      \
+  offsetof(                                                                    \
+      struct {                                                                 \
+        char c;                                                                \
+        type t;                                                                \
+      },                                                                       \
+      t)
+#endif
 
 #ifdef __cplusplus
 }
