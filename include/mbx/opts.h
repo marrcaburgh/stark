@@ -1,5 +1,5 @@
 //
-// libmbx - a C99+ utility library - mbx_opts - blazing-fast feature-full
+// libmbx - a C99+ utility library - mbx_opts - a blazing-fast feature-full
 // command-line parser
 // Copyright (C) 2026  marrcaburgh
 //
