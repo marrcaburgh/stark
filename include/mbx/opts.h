@@ -45,7 +45,12 @@ typedef bool (*mbx_opt_validator)(const void *const restrict val,
 typedef bool (*mbx_opt_assigner)(const char *const restrict str,
                                  void *const restrict dest, uint8_t const arrc);
 
-typedef enum mbx_opts_err { MBX_OPTS_ERR_SUCCESS } mbx_opts_err;
+typedef enum mbx_opts_err {
+  MBX_OPTS_ERR_SUCCESS,
+  MBX_OPTS_ERR_UNKNOWN_OPTION,
+  MBX_OPTS_ERR_ASSIGN_FAILED,
+  MBX_OPTS_ERR_NULL_OR_INVALID
+} mbx_opts_err;
 
 typedef enum mbx_opt_type {
   /* regular types */

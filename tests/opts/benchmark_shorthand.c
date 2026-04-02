@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-int main() {
+int main(void) {
   static char const *argv[] = {"benchmark-shorthand",
                                "-q",
                                "-w",

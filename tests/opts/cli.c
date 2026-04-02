@@ -1,6 +1,6 @@
 #include "test.h"
 
-int main(const int argc, const char **argv) {
+int main(int const argc, char const **argv) {
   struct mbx_opts opts = {.desc = "CLI test", .optc = optc, .optv = optv};
 
   if (!mbx_opts_init(&opts)) {

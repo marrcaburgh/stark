@@ -5,6 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 set(CMAKE_C_COMPILER /usr/bin/clang)
 
 option(BUILD_TESTS off)
+option(BUILD_MATH off)
 
 add_library(mbx_core STATIC src/core.c)
 add_library(mbx_opts STATIC src/opts.c)

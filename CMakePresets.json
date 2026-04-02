@@ -17,8 +17,9 @@
       "displayName": "Debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -fsanitize=address,undefined",
-        "BUILD_TESTS": "ON"
+        "CMAKE_C_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -pedantic",
+        "BUILD_TESTS": "ON",
+        "BUILD_MATH": "OFF"
       }
     },
     {
@@ -36,15 +37,28 @@
       "inherits": "release-base",
       "displayName": "Release",
       "cacheVariables": {
-        "BUILD_TESTS": "ON"
+        "BUILD_TESTS": "OFF",
+        "BUILD_MATH": "OFF"
       }
     },
     {
-      "name": "release-no-tests",
+      "name": "release-math",
       "inherits": "release-base",
-      "displayName": "ReleaseNoTests",
+      "displayName": "Release",
       "cacheVariables": {
-        "BUILD_TESTS": "OFF"
+        "BUILD_TESTS": "OFF",
+        "BUILD_MATH": "ON"
+      }
+    },
+    {
+      "name": "release-tests",
+      "inherits": "base",
+      "displayName": "ReleaseTests",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_FLAGS_RELEASE": "-O3 -march=native -DNDEBUG",
+        "BUILD_TESTS": "ON",
+        "BUILD_MATH": "OFF"
       }
     }
   ],
@@ -54,12 +68,16 @@
       "configurePreset": "debug"
     },
     {
+      "name": "release-tests",
+      "configurePreset": "release-tests"
+    },
+    {
       "name": "release",
       "configurePreset": "release"
     },
     {
-      "name": "release-no-tests",
-      "configurePreset": "release-no-tests"
+      "name": "release-math",
+      "configurePreset": "release-math"
     }
   ],
   "workflowPresets": [

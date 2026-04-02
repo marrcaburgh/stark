@@ -1,6 +1,6 @@
 #include "test.h"
 
-int main() {
+int main(void) {
   // clang-format off
   static char const *argv[] = {"benchmark-longhand",
                                "--r",

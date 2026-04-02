@@ -32,13 +32,14 @@
 #define MBX_OPT_UNKNOWN 2
 #define MBX_OPT_ASSIGN_FAILED 1
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_UNUSED static void
+MBX_COLD MBX_ALWAYS_INLINE MBX_UNUSED static inline void
 usage(MBX_UNUSED const struct mbx_opt *const restrict opt) {
   // TODO: print usage
 }
 
-MBX_COLD MBX_ALWAYS_INLINE static void
-help(MBX_UNUSED struct mbx_opts *const restrict opts) {
+MBX_COLD MBX_ALWAYS_INLINE inline static void
+help(MBX_UNUSED struct mbx_opts *const restrict opts,
+     MBX_UNUSED mbx_opt_callback const cb) {
   // TODO: print help
 }
 
@@ -52,17 +53,17 @@ assign_opt(struct mbx_opts *const restrict opts,
            struct mbx_opt *const restrict opt) {
   opt->mods |= MBX_OPT_FOUND;
 
-  if (opt->handler.callback != NULL) {
+  if (opt->type == MBX_OPT_TYPE_HELP) {
+    help(opts, opt->handler.callback);
+
+    return true;
+  } else if (opt->handler.callback != NULL) {
     opt->handler.callback(opt->ctx);
 
     return true;
   }
 
   switch (opt->type) {
-  case MBX_OPT_TYPE_HELP:
-    help(opts);
-
-    break;
   default: {
     char const *str;
     void *val_ptr = NULL;
@@ -215,8 +216,8 @@ MBX_ALWAYS_INLINE MBX_FLATTEN static inline int
 match_longhand(struct mbx_opts *const restrict opts) {
   struct mbx_opt *restrict o;
   char const *const restrict token = opts->_token;
-  char const *const restrict eq = mbx_strchr(token, '=');
-  size_t const t_len = eq != NULL ? (size_t)(eq - token) : mbx_strlen(token);
+  char const *const restrict eq = MBX_STRCHR(token, '=');
+  size_t const t_len = eq != NULL ? (size_t)(eq - token) : MBX_STRLEN(token);
   size_t i = hash_n(token, t_len) & (MBX_OPTS_LH_LUT_SIZE - 1);
   size_t probes = 0;
 
@@ -227,10 +228,10 @@ match_longhand(struct mbx_opts *const restrict opts) {
       return MBX_OPT_UNKNOWN;
     }
 
-    if ((o->longhand != NULL && MBX_EXPECT_TRUE(o->long_len == t_len) &&
-         MBX_EXPECT_TRUE(mbx_bcmp(o->longhand, token, t_len))) ||
+    if ((o->longhand != NULL && (MBX_EXPECT_TRUE(o->long_len == t_len)) &&
+         MBX_EXPECT_TRUE(MBX_MEMCMP(o->longhand, token, t_len) == 0)) ||
         (o->alias != NULL && MBX_EXPECT_TRUE(o->alias_len == t_len) &&
-         MBX_EXPECT_TRUE(mbx_bcmp(o->alias, token, t_len)))) {
+         MBX_EXPECT_TRUE(MBX_MEMCMP(o->alias, token, t_len) == 0))) {
       break;
     }
 
@@ -272,7 +273,7 @@ match_shorthand(struct mbx_opts *const restrict opts) {
   return 0;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE static void error(const char *const errstr, ...) {
+MBX_COLD static void error(const char *const errstr, ...) {
   va_list ap;
 
   va_start(ap, errstr);
@@ -282,7 +283,7 @@ MBX_COLD MBX_ALWAYS_INLINE static void error(const char *const errstr, ...) {
   va_end(ap);
 }
 
-MBX_COLD MBX_ALWAYS_INLINE static bool
+MBX_COLD MBX_ALWAYS_INLINE static inline bool
 require(const struct mbx_opt *const restrict opt) {
   if (opt->longhand != NULL) {
     error("option '--%s' must have a destination pointer", opt->longhand);
@@ -297,7 +298,7 @@ require(const struct mbx_opt *const restrict opt) {
   return true;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static bool
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
 lh_lut_push(struct mbx_opts *const restrict opts,
             struct mbx_opt *const restrict opt, bool const is_alias) {
   bool ok = true;
@@ -312,12 +313,12 @@ lh_lut_push(struct mbx_opts *const restrict opts,
     char const *prev_type = is_alias ? prev->alias : prev->longhand;
     char const *prev_other_type = is_alias ? prev->longhand : prev->alias;
 
-    if (prev_type != NULL && mbx_strcmp(prev_type, str) == 0) {
+    if (prev_type != NULL && MBX_STRCMP(prev_type, str) == 0) {
       error("duplicate %s '--%s'", type, str);
       ok = false;
     }
 
-    if (prev_other_type != NULL && mbx_strcmp(prev_other_type, str) == 0) {
+    if (prev_other_type != NULL && MBX_STRCMP(prev_other_type, str) == 0) {
       error("%s '--%s' shadows %s '--%s'", type, str, other_type,
             prev_other_type);
 
@@ -339,18 +340,18 @@ lh_lut_push(struct mbx_opts *const restrict opts,
   return ok;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static bool
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
 populate_longhand_lut(struct mbx_opts *const restrict opts,
                       struct mbx_opt *const restrict opt) {
   bool ok = true;
 
-  // mbx_strlen() is used here to precalculate lengths so that mbx_strlen is not
+  // MBX_STRLEN() is used here to precalculate lengths so that it's not
   // called in the hot path. if the length is greater than 255, its still used
   // as a fallback, but that is a very unlikely case.
   if (opt->longhand != NULL) {
     ok &= lh_lut_push(opts, opt, false);
 
-    if ((opt->long_len = (uint8_t)mbx_strlen(opt->longhand)) > 63) {
+    if ((opt->long_len = (uint8_t)MBX_STRLEN(opt->longhand)) > 63) {
       error("longhand `--%s` exceeds max character limit of 63 characters",
             opt->longhand);
 
@@ -361,7 +362,7 @@ populate_longhand_lut(struct mbx_opts *const restrict opts,
   if (opt->alias != NULL) {
     ok &= lh_lut_push(opts, opt, true);
 
-    if ((opt->alias_len = (uint8_t)mbx_strlen(opt->alias)) > 63) {
+    if ((opt->alias_len = (uint8_t)MBX_STRLEN(opt->alias)) > 63) {
       error("alias `--%s` exceeds max character limit of 63 characters",
             opt->alias);
 
@@ -372,7 +373,7 @@ populate_longhand_lut(struct mbx_opts *const restrict opts,
   return ok;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN bool
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
 register_opt(struct mbx_opts *const restrict opts,
              struct mbx_opt *const restrict opt) {
   bool ok = true;
@@ -386,7 +387,7 @@ register_opt(struct mbx_opts *const restrict opts,
 
         ok = false;
       } else {
-        opt->long_len = mbx_strlen(opt->usage);
+        opt->long_len = MBX_STRLEN(opt->usage);
       }
     } else if (opt->type == MBX_OPT_TYPE_BOOL) {
       error("positional mod cannot be combined with boolean type");
@@ -428,7 +429,7 @@ register_opt_longhand:
   return ok &= populate_longhand_lut(opts, opt);
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN bool
+MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
 validate_opt(struct mbx_opt *const restrict opt) {
   if (opt->assign != NULL) {
     if (opt->dest == NULL && !require(opt)) {
@@ -538,9 +539,10 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
       struct mbx_opt *const restrict o = opts->_pos_lut[pos_idx];
 
       if (o->type == MBX_OPT_TYPE_SUBCOMMAND) {
-        size_t arg_len = mbx_strlen(arg);
+        size_t arg_len = MBX_STRLEN(arg);
 
-        if (!(o->long_len == arg_len && mbx_bcmp(arg, o->usage, o->long_len))) {
+        if (!(o->long_len == arg_len &&
+              MBX_EXPECT_TRUE(MBX_MEMCMP(arg, o->usage, o->long_len) == 0))) {
           goto mbx_opts_parse_unknown_option;
         }
       }

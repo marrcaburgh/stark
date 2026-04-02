@@ -1,6 +1,6 @@
 #include "test.h"
 
-int main() {
+int main(void) {
   static char const *argv[] = {"benchmark-longhand-equals",
                                "--r",
                                "--t",

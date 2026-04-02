@@ -1,9 +1,8 @@
 #include "test.h"
 
 #include <stdbool.h>
-#include <stdio.h>
 
-int main() {
+int main(void) {
   // clang-format off
   char const *argv[] = {
       "positional",

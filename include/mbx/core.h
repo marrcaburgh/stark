@@ -50,8 +50,8 @@ extern "C" {
 #ifdef MBX_COMPILER_GCC_LIKE
 
 // Inline assembly
-#define MBX_VOLATILE __volatile__
 #define MBX_ASM(...) __asm__(__VA_ARGS__)
+#define MBX_ASM_VOLATILE(...) __asm__ __volatile__(__VA_ARGS__)
 
 // Optimization hints
 #define MBX_HOT __attribute__((hot))
@@ -116,7 +116,7 @@ extern "C" {
 
 #define MBX_UADD_OVERFLOW(a, b, r) __builtin_uadd_overflow((a), (b), (r))
 #define MBX_USUB_OVERFLOW(a, b, r) __builtin_usub_overflow((a), (b), (r))
-#define MBX_UMUL_OVERFLOW(a, b, r) __builtin_umul_overflow((a), (b), (r))
+#define MBX_UMUL_OVERFLOW(a, b, r) __builtin_umull_overflow((a), (b), (r))
 #define MBX_UADDL_OVERFLOW(a, b, r) __builtin_uaddl_overflow((a), (b), (r))
 #define MBX_USUBL_OVERFLOW(a, b, r) __builtin_usubl_overflow((a), (b), (r))
 #define MBX_UMULL_OVERFLOW(a, b, r) __builtin_umull_overflow((a), (b), (r))
@@ -162,39 +162,9 @@ extern "C" {
 #define MBX_FABS(x) __builtin_fabs((x))
 #define MBX_FABSF(x) __builtin_fabsf((x))
 #define MBX_FABSL(x) __builtin_fabsl((x))
-#define MBX_FMOD(x, y) __builtin_fmod((x), (y))
-#define MBX_FMODF(x, y) __builtin_fmodf((x), (y))
-#define MBX_FMODL(x, y) __builtin_fmodl((x), (y))
 #define MBX_SQRT(x) __builtin_sqrt((x))
 #define MBX_SQRTF(x) __builtin_sqrtf((x))
 #define MBX_SQRTL(x) __builtin_sqrtl((x))
-#define MBX_CBRT(x) __builtin_cbrt((x))
-#define MBX_CBRTF(x) __builtin_cbrtf((x))
-#define MBX_CBRTL(x) __builtin_cbrtl((x))
-#define MBX_HYPOT(x, y) __builtin_hypot((x), (y))
-#define MBX_HYPOTF(x, y) __builtin_hypotf((x), (y))
-#define MBX_HYPOTL(x, y) __builtin_hypotl((x), (y))
-#define MBX_POW(x, y) __builtin_pow((x), (y))
-#define MBX_POWF(x, y) __builtin_powf((x), (y))
-#define MBX_POWL(x, y) __builtin_powl((x), (y))
-#define MBX_EXP(x) __builtin_exp((x))
-#define MBX_EXPF(x) __builtin_expf((x))
-#define MBX_EXPL(x) __builtin_expl((x))
-#define MBX_EXP2(x) __builtin_exp2((x))
-#define MBX_EXP2F(x) __builtin_exp2f((x))
-#define MBX_EXP2L(x) __builtin_exp2l((x))
-#define MBX_EXPM1(x) __builtin_expm1((x))
-#define MBX_LOG(x) __builtin_log((x))
-#define MBX_LOGF(x) __builtin_logf((x))
-#define MBX_LOGL(x) __builtin_logl((x))
-#define MBX_LOG2(x) __builtin_log2((x))
-#define MBX_LOG2F(x) __builtin_log2f((x))
-#define MBX_LOG2L(x) __builtin_log2l((x))
-#define MBX_LOG10(x) __builtin_log10((x))
-#define MBX_LOG10F(x) __builtin_log10f((x))
-#define MBX_LOG10L(x) __builtin_log10l((x))
-#define MBX_LOG1P(x) __builtin_log1p((x))
-#define MBX_LOG1PF(x) __builtin_log1pf((x))
 #define MBX_CEIL(x) __builtin_ceil((x))
 #define MBX_CEILF(x) __builtin_ceilf((x))
 #define MBX_CEILL(x) __builtin_ceill((x))
@@ -207,43 +177,17 @@ extern "C" {
 #define MBX_TRUNC(x) __builtin_trunc((x))
 #define MBX_TRUNCF(x) __builtin_truncf((x))
 #define MBX_TRUNCL(x) __builtin_truncl((x))
-#define MBX_NEARBYINT(x) __builtin_nearbyint((x))
-#define MBX_RINT(x) __builtin_rint((x))
-#define MBX_RINTF(x) __builtin_rintf((x))
-#define MBX_LRINT(x) __builtin_lrint((x))
-#define MBX_LRINTF(x) __builtin_lrintf((x))
-#define MBX_LLRINT(x) __builtin_llrint((x))
-#define MBX_LLRINTF(x) __builtin_llrintf((x))
-#define MBX_LROUND(x) __builtin_lround((x))
-#define MBX_LROUNDF(x) __builtin_lroundf((x))
-#define MBX_LLROUND(x) __builtin_llround((x))
-#define MBX_LLROUNDF(x) __builtin_llroundf((x))
 
 // Floating point - misc
 #define MBX_COPYSIGN(x, y) __builtin_copysign((x), (y))
 #define MBX_COPYSIGNF(x, y) __builtin_copysignf((x), (y))
 #define MBX_COPYSIGNL(x, y) __builtin_copysignl((x), (y))
-#define MBX_NEXTAFTER(x, y) __builtin_nextafter((x), (y))
-#define MBX_NEXTAFTERF(x, y) __builtin_nextafterf((x), (y))
-#define MBX_NEXTAFTERL(x, y) __builtin_nextafterl((x), (y))
-#define MBX_LDEXP(x, n) __builtin_ldexp((x), (n))
-#define MBX_LDEXPF(x, n) __builtin_ldexpf((x), (n))
-#define MBX_LDEXPL(x, n) __builtin_ldexpl((x), (n))
-#define MBX_FREXP(x, p) __builtin_frexp((x), (p))
-#define MBX_FREXPF(x, p) __builtin_frexpf((x), (p))
-#define MBX_FREXPL(x, p) __builtin_frexpl((x), (p))
-#define MBX_MODF(x, p) __builtin_modf((x), (p))
-#define MBX_MODFF(x, p) __builtin_modff((x), (p))
-#define MBX_MODFL(x, p) __builtin_modfl((x), (p))
 #define MBX_FMAX(x, y) __builtin_fmax((x), (y))
 #define MBX_FMAXF(x, y) __builtin_fmaxf((x), (y))
 #define MBX_FMAXL(x, y) __builtin_fmaxl((x), (y))
 #define MBX_FMIN(x, y) __builtin_fmin((x), (y))
 #define MBX_FMINF(x, y) __builtin_fminf((x), (y))
 #define MBX_FMINL(x, y) __builtin_fminl((x), (y))
-#define MBX_FMA(x, y, z) __builtin_fma((x), (y), (z))
-#define MBX_FMAF(x, y, z) __builtin_fmaf((x), (y), (z))
-#define MBX_FMAL(x, y, z) __builtin_fmal((x), (y), (z))
 #define MBX_ISGREATER(x, y) __builtin_isgreater((x), (y))
 #define MBX_ISGREATEREQUAL(x, y) __builtin_isgreaterequal((x), (y))
 #define MBX_ISLESS(x, y) __builtin_isless((x), (y))
@@ -273,23 +217,6 @@ extern "C" {
 #define MBX_CONJ(x) __builtin_conj((x))
 #define MBX_CONJF(x) __builtin_conjf((x))
 #define MBX_CONJL(x) __builtin_conjl((x))
-#define MBX_CABS(x) __builtin_cabs((x))
-#define MBX_CABSF(x) __builtin_cabsf((x))
-#define MBX_CABSL(x) __builtin_cabsl((x))
-#define MBX_CARG(x) __builtin_carg((x))
-#define MBX_CARGF(x) __builtin_cargf((x))
-#define MBX_CARGL(x) __builtin_cargl((x))
-
-// Memory
-#define MBX_MEMCPY(dst, src, n) __builtin_memcpy((dst), (src), (n))
-#define MBX_MEMMOVE(dst, src, n) __builtin_memmove((dst), (src), (n))
-#define MBX_MEMSET(dst, val, n) __builtin_memset((dst), (val), (n))
-#define MBX_MEMCMP(a, b, n) __builtin_memcmp((a), (b), (n))
-
-// Strings
-#define MBX_STRLEN(s) __builtin_strlen((s))
-#define MBX_STRCHR(s, c) (char const *)__builtin_strchr((s), (c))
-#define MBX_STRCMP(s1, s2) __builtin_strcmp((s1), (s2))
 
 // Control flow
 #define MBX_UNREACHABLE() __builtin_unreachable()
@@ -297,6 +224,19 @@ extern "C" {
 #define MBX_DEBUGTRAP() __builtin_debugtrap()
 #define MBX_ASSUME(cond) __builtin_assume((cond))
 #define MBX_CONSTANT_P(x) __builtin_constant_p((x))
+
+// Memory
+#define MBX_MEMCPY(dst, src, n) __builtin_memcpy((dst), (src), (n))
+#define MBX_MEMMOVE(dst, src, n) __builtin_memmove((dst), (src), (n))
+#define MBX_MEMSET(dst, val, n) __builtin_memset((dst), (val), (n))
+#define MBX_MEMCMP(a, b, n) __builtin_memcmp((a), (b), (n))
+#define MBX_MEMCHR(s, c, n) __builtin_memchr((s), (c), (n))
+
+// Strings
+#define MBX_STRLEN(s) __builtin_strlen((s))
+#define MBX_STRCHR(s, c) (char const *)__builtin_strchr((s), (c))
+#define MBX_STRCMP(s1, s2) __builtin_strcmp((s1), (s2))
+#define MBX_STRNCMP(s1, s2, n) __builtin_strncmp((s1), (s2), (n))
 
 // Branch hints
 #define MBX_EXPECT_TRUE(x) __builtin_expect(!!(x), 1)
@@ -332,7 +272,6 @@ extern "C" {
 #else
 
 // Fallbacks for unsupported compilers
-#define MBX_VOLATILE volatile
 #define MBX_HOT
 #define MBX_COLD
 #define MBX_FLATTEN
@@ -358,17 +297,20 @@ extern "C" {
 #define MBX_DESTRUCTOR
 #define MBX_EXPECT_TRUE(x) (x)
 #define MBX_EXPECT_FALSE(x) (x)
+#define MBX_UNREACHABLE() (*(volatile int *)NULL = NULL)
+#define MBX_TRAP() (*(volatile int *)NULL = NULL)
+#define MBX_DEBUGTRAP() ((void)NULL)
 
-static inline void __mbx_memcpy(void *dst, void const *src, size_t n) {
-  uint8_t const *s = (uint8_t const *)src;
+static inline void _mbx_memcpy(void *dst, void const *src, size_t n) {
+  uint8_t const *restrict s = (uint8_t const *)src;
 
-  for (uint8_t *d = dst; n-- > 0; *d++ = *s++)
+  for (uint8_t *restrict d = dst; n-- > 0; *d++ = *s++)
     ;
 }
 
-#define MBX_MEMCPY(dst, src, n) __mbx_memcpy((dst), (src), (n))
+#define MBX_MEMCPY(dst, src, n) _mbx_memcpy((dst), (src), (n))
 
-static inline void __mbx_memmove(void *dst, void const *src, size_t n) {
+static inline void _mbx_memmove(void *dst, void const *src, size_t n) {
   uint8_t *d = dst;
   uint8_t const *s = src;
 
@@ -384,19 +326,19 @@ static inline void __mbx_memmove(void *dst, void const *src, size_t n) {
   }
 }
 
-#define MBX_MEMMOVE(dst, src, n) __mbx_memmove((dst), (src), (n))
+#define MBX_MEMMOVE(dst, src, n) _mbx_memmove((dst), (src), (n))
 
-static inline void __mbx_memset(void *dst, int val, size_t n) {
+static inline void _mbx_memset(void *restrict dst, int val, size_t n) {
   for (uint8_t *d = dst; n-- > 0; *d++ = (uint8_t)val)
     ;
 }
 
-#define MBX_MEMSET(dst, val, n) __mbx_memset((dst), (val), (n))
+#define MBX_MEMSET(dst, val, n) _mbx_memset((dst), (val), (n))
 
-static inline int __mbx_memcmp(void const *p1, void const *p2, size_t n) {
-  uint8_t const *u1 = p1, *u2 = p2;
-
-  for (; n-- > 0; u1++, u2++) {
+static inline int _mbx_memcmp(void const *restrict p1, void const *restrict p2,
+                              size_t n) {
+  for (uint8_t const *restrict u1 = p1, *restrict u2 = p2; n-- > 0;
+       u1++, u2++) {
     if (*u1 != *u2) {
       return *u1 - *u2;
     }
@@ -405,34 +347,33 @@ static inline int __mbx_memcmp(void const *p1, void const *p2, size_t n) {
   return 0;
 }
 
-#define MBX_MEMCMP(a, b, n) __mbx_memcmp((a), (b), (n))
+#define MBX_MEMCMP(a, b, n) _mbx_memcmp((a), (b), (n))
 
-static inline size_t __mbx_strlen(char const *str) {
+static inline size_t _mbx_strlen(char const *restrict str) {
   for (size_t len = 0;; len++) {
     if (str[len] == '\0') {
       return len;
     }
   }
-
-  return 0;
 }
 
-#define MBX_STRLEN(s) __mbx_strlen((s))
+#define MBX_STRLEN(s) _mbx_strlen((s))
 
-static inline char const *__mbx_strchr(char const *str, char const c) {
-  for (; *str != '\0'; str++) {
+static inline char const *_mbx_strchr(char const *restrict str, char const c) {
+  for (;; str++) {
     if (*str == c) {
       return str;
+    } else if (*str == '\0') {
+      return NULL;
     }
   }
-
-  return NULL;
 }
 
-#define MBX_STRCHR(s, c) __mbx_strchr(s, c)
+#define MBX_STRCHR(s, c) _mbx_strchr(s, c)
 
-static inline int __mbx_strcmp(char const *s1, char const *s2) {
-  uint8_t const *u1 = (uint8_t const *)s1, *u2 = (uint8_t const *)s2;
+static inline int _mbx_strcmp(char const *s1, char const *s2) {
+  uint8_t const *restrict u1 = (uint8_t const *)s1, *restrict u2 =
+                                                        (uint8_t const *)s2;
 
   for (int d;; u1++, u2++) {
     d = *u1 - *u2;
@@ -447,7 +388,7 @@ static inline int __mbx_strcmp(char const *s1, char const *s2) {
   return 0;
 }
 
-#define MBX_STRCMP(s1, s2) __mbx_strcmp(s1, s2)
+#define MBX_STRCMP(s1, s2) _mbx_strcmp(s1, s2)
 
 #endif // MBX_COMPILER_GCC_LIKE
 

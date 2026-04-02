@@ -2,21 +2,21 @@
 
 #include <stdio.h>
 
-void callback(const void *const ctx) { printf("callback\n"); }
+void callback(MBX_UNUSED const void *const ctx) { printf("callback\n"); }
 
-void print_shorthand() {
-  printf("shorthand:\n\tbool: %b\n\tlong1: %lu\n\tlong2: %lu\n\tdouble1: "
+void print_shorthand(void) {
+  printf("shorthand:\n\tbool: %d\n\tlong1: %lu\n\tlong2: %lu\n\tdouble1: "
          "%f\n\tdouble2: %f\n\tconst char *1: %s\n\tconst char *2: %s\n",
          q, u, i, d, f, l, z);
 }
 
-void print_longhand() {
-  printf("longhand:\n\tbool: %b\n\tlong1: %lu\n\tlong2: %lu\n\tdouble1: "
+void print_longhand(void) {
+  printf("longhand:\n\tbool: %d\n\tlong1: %lu\n\tlong2: %lu\n\tdouble1: "
          "%f\n\tdouble2: %f\n\tconst char *1: %s\n\tconst char *2: %s\n",
          r, p, a, h, j, c, v);
 }
 
-void print_positional() {
+void print_positional(void) {
   printf("positional:\n\tlong: %lu\n\tdouble: %f\n\tconst char *: %s\n", u, d,
          l);
 }

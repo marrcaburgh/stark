@@ -2,7 +2,7 @@
 
 set -e
 
-BUILD_DIR="./build/release/tests/opts"
+BUILD_DIR="./build/release-tests/tests/opts"
 
 "$BUILD_DIR/shorthand"
 printf "\n"

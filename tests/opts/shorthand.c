@@ -1,6 +1,6 @@
 #include "test.h"
 
-int main() {
+int main(void) {
   // clang-format off
   const char *argv[] = {
     "shorthand",

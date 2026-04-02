@@ -19,8 +19,8 @@ extern int const optc;
 void callback(const void *const ctx);
 bool validate(const char *const str, const void *const ctx);
 
-void print_shorthand();
-void print_longhand();
-void print_positional();
+void print_shorthand(void);
+void print_longhand(void);
+void print_positional(void);
 
 #endif // BENCHMARK_H
