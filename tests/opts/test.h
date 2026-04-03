@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "mbx/opts.h"
+#include "stark/opts.h"
 
 #define ARRAY_LENGTH(a) (sizeof(a) / sizeof(a[0]))
 
@@ -12,8 +12,8 @@ extern long u, i, o, p, a, s;
 extern double d, f, g, h, j, k;
 extern char const *l, *z, *x, *c, *v, *b;
 
-extern struct mbx_opts subcommand;
-extern struct mbx_opt optv[];
+extern struct stark_opts subcommand;
+extern struct stark_opt optv[];
 extern int const optc;
 
 void callback(const void *const ctx);

@@ -19,15 +19,15 @@ int main(void) {
                                "-xstr2"};
 
   int const argc = sizeof(argv) / sizeof(argv[0]);
-  struct mbx_opts opts = {
+  struct stark_opts opts = {
       .desc = "benchmark-shorthand test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts)) {
+  if (!stark_opts_init(&opts)) {
     return 1;
   }
 
   for (int i = 0; i < 100000000; i++) {
-    if (!mbx_opts_parse(&opts, argc, argv)) {
+    if (!stark_opts_parse(&opts, argc, argv)) {
       return 2;
     }
   }

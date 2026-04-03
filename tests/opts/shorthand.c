@@ -14,13 +14,14 @@ int main(void) {
   };
   // clang-format on
 
-  struct mbx_opts opts = {.desc = "shorthand test", .optc = optc, .optv = optv};
+  struct stark_opts opts = {
+      .desc = "shorthand test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts)) {
+  if (!stark_opts_init(&opts)) {
     return 1;
   }
 
-  if (!mbx_opts_parse(&opts, ARRAY_LENGTH(argv), argv)) {
+  if (!stark_opts_parse(&opts, ARRAY_LENGTH(argv), argv)) {
     return 2;
   }
 

@@ -1,5 +1,5 @@
 add_library(test test.c)
-target_link_libraries(test PUBLIC mbx_opts)
+target_link_libraries(test PUBLIC stark_opts)
 
 add_executable(cli cli.c)
 target_link_libraries(cli PRIVATE test)

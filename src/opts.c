@@ -1,5 +1,5 @@
 //
-// libmbx - a C99+ utility library - mbx_opts - a blazing-fast feature-full
+// stark - a C99+ utility library - stark_opts - a blazing-fast feature-full
 // command-line parser
 // Copyright (C) 2026  marrcaburgh
 //
@@ -18,7 +18,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 //
 
-#include "mbx/opts.h"
+#include "stark/opts.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -29,31 +29,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MBX_OPT_UNKNOWN 2
-#define MBX_OPT_ASSIGN_FAILED 1
+#define STARK_OPT_UNKNOWN 2
+#define STARK_OPT_ASSIGN_FAILED 1
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_UNUSED static inline void
-usage(MBX_UNUSED const struct mbx_opt *const restrict opt) {
+STARK_COLD STARK_ALWAYS_INLINE STARK_UNUSED static inline void
+usage(STARK_UNUSED const struct stark_opt *const restrict opt) {
   // TODO: print usage
 }
 
-MBX_COLD MBX_ALWAYS_INLINE inline static void
-help(MBX_UNUSED struct mbx_opts *const restrict opts,
-     MBX_UNUSED mbx_opt_callback const cb) {
+STARK_COLD STARK_ALWAYS_INLINE static inline void
+help(STARK_UNUSED struct stark_opts *const restrict opts,
+     STARK_UNUSED stark_opt_callback const cb) {
   // TODO: print help
 }
 
-MBX_NOINLINE static bool run_subcommand(struct mbx_opts *const restrict opts,
-                                        struct mbx_opt *const restrict opt) {
-  return mbx_opts_parse(opt->ctx, opts->_argc, opts->_argv);
+STARK_NOINLINE static bool
+run_subcommand(struct stark_opts *const restrict opts,
+               struct stark_opt *const restrict opt) {
+  return stark_opts_parse(opt->ctx, opts->_argc, opts->_argv);
 }
 
-MBX_ALWAYS_INLINE static inline bool
-assign_opt(struct mbx_opts *const restrict opts,
-           struct mbx_opt *const restrict opt) {
-  opt->mods |= MBX_OPT_FOUND;
+STARK_ALWAYS_INLINE static inline bool
+assign_opt(struct stark_opts *const restrict opts,
+           struct stark_opt *const restrict opt) {
+  opt->mods |= STARK_OPT_FOUND;
 
-  if (opt->type == MBX_OPT_TYPE_HELP) {
+  if (opt->type == STARK_OPT_TYPE_HELP) {
     help(opts, opt->handler.callback);
 
     return true;
@@ -63,128 +64,122 @@ assign_opt(struct mbx_opts *const restrict opts,
     return true;
   }
 
-  switch (opt->type) {
-  default: {
-    char const *str;
-    void *val_ptr = NULL;
+  char const *str;
+  void *val_ptr = NULL;
 
-    if (opt->type == MBX_OPT_TYPE_SUBCOMMAND) {
-      if (!run_subcommand(opts, opt)) {
-        return false;
-      }
-
-      opts->_argc = 0;
-      return true;
+  if (opt->type == STARK_OPT_TYPE_SUBCOMMAND) {
+    if (!run_subcommand(opts, opt)) {
+      return false;
     }
 
-    if ((opt->mods & MBX_OPT_MOD_ARRAY) && opt->arrc == opt->arrl) {
-      fprintf(stderr, "array out of bounds");
+    opts->_argc = 0;
+    return true;
+  }
+
+  if ((opt->mods & STARK_OPT_MOD_ARRAY) && opt->arrc == opt->arrl) {
+    fprintf(stderr, "array out of bounds\n");
+
+    return false;
+  }
+
+  // This is how you get `-i3` and '-i 3' to work properly, same with
+  // `--int=3` vs `--int 3`
+  if (opt->mods & STARK_OPT_MOD_POSITIONAL) {
+    str = *opts->_argv;
+  } else if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
+    goto assign_opt_skip_arg;
+  } else if (opts->_token != NULL && *opts->_token != '\0') {
+    str = opts->_token;
+    opts->_token = NULL;
+  } else if (opts->_argc > 1) {
+    opts->_argc--;
+    opts->_argv++;
+    str = *opts->_argv;
+  } else {
+    fprintf(stderr, "no value provided: '%s'\n",
+            opts->_token != NULL ? opts->_token : *opts->_argv);
+
+    return false;
+  }
+
+assign_opt_skip_arg:
+  if (opt->assign != NULL) {
+    if (!opt->assign(str, opt->dest, opt->arrc)) {
+      return false;
+    }
+
+  } else if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
+    *(((bool *)opt->dest) + opt->arrc) = !*(((bool *)opt->dest) + opt->arrc);
+    val_ptr = ((bool *)opt->dest) + opt->arrc;
+  } else if (opt->type == STARK_OPT_TYPE_STRING) {
+    *(((char const **)opt->dest) + opt->arrc) = str;
+    val_ptr = ((char const **)opt->dest) + opt->arrc;
+  } else {
+    union {
+      long l;
+      double d;
+    } val;
+    char *endptr = NULL;
+    errno = 0;
+
+    if (opt->type == STARK_OPT_TYPE_INTEGER ||
+        opt->type == STARK_OPT_TYPE_LONG) {
+      val.l = strtol(str, &endptr, 10);
+    } else if (opt->type == STARK_OPT_TYPE_FLOAT ||
+               opt->type == STARK_OPT_TYPE_DOUBLE) {
+      val.d = strtod(str, &endptr);
+    }
+
+    if (endptr == str) {
+      fprintf(stderr, "not a number: '%s'\n", str);
+
+      return false;
+    } else if (errno == ERANGE) {
+      fprintf(stderr, "out of range: '%s'\n", str);
 
       return false;
     }
 
-    if (opt->mods & MBX_OPT_MOD_POSITIONAL) {
-      str = *opts->_argv;
-      goto assign_opt_skip_next;
-    } else if (opt->type == MBX_OPT_TYPE_BOOL) {
-      goto assign_opt_skip_next;
-    }
-
-    // This is how you get `-i3` and '-i 3' to work properly, same with
-    // `--int=3` vs `--int 3`
-    if (opts->_token != NULL && *opts->_token != '\0') {
-      str = opts->_token;
-      opts->_token = NULL;
-    } else if (opts->_argc > 1) {
-      opts->_argc--;
-      opts->_argv++;
-      str = *opts->_argv;
-    } else {
-      fprintf(stderr, "no value provided: '%s'\n",
-              opts->_token != NULL ? opts->_token : *opts->_argv);
-
-      return false;
-    }
-
-  assign_opt_skip_next:
-    if (opt->assign != NULL) {
-      if (!opt->assign(str, opt->dest, opt->arrc)) {
-        return false;
-      }
-
-    } else if (opt->type == MBX_OPT_TYPE_BOOL) {
-      *(((bool *)opt->dest) + opt->arrc) = !*(((bool *)opt->dest) + opt->arrc);
-      val_ptr = ((bool *)opt->dest) + opt->arrc;
-    } else if (opt->type == MBX_OPT_TYPE_STR) {
-      *(((char const **)opt->dest) + opt->arrc) = str;
-      val_ptr = ((char const **)opt->dest) + opt->arrc;
-    } else {
-      union {
-        long l;
-        double d;
-      } val;
-      char *endptr = NULL;
-      errno = 0;
-
-      if (opt->type == MBX_OPT_TYPE_INT || opt->type == MBX_OPT_TYPE_LONG) {
-        val.l = strtol(str, &endptr, 10);
-      } else if (opt->type == MBX_OPT_TYPE_FLOAT ||
-                 opt->type == MBX_OPT_TYPE_DBL) {
-        val.d = strtod(str, &endptr);
-      }
-
-      if (endptr == str) {
-        fprintf(stderr, "not a number: '%s'\n", str);
-
-        return false;
-      } else if (errno == ERANGE) {
-        fprintf(stderr, "out of range: '%s'\n", str);
+    // The reason pointer math is used for assignment here is so that arrays
+    // can be assigned properly. For normal non-array options it just works
+    // normally (ptr + 0).
+    switch (opt->type) {
+    case STARK_OPT_TYPE_INTEGER:
+      if (val.l > INT_MAX || val.l < INT_MIN) {
+        fprintf(stderr, "integer out of range: '%s'\n", str);
 
         return false;
       }
 
-      // The reason pointer math is used for assignment here is so that arrays
-      // can be assigned properly. For normal non-array options it just works
-      // normally (ptr + 0).
-      switch (opt->type) {
-      case MBX_OPT_TYPE_INT:
-        if (val.l > INT_MAX || val.l < INT_MIN) {
-          fprintf(stderr, "integer out of range: '%s'\n", str);
+      *(((int *)opt->dest) + opt->arrc) = (int)val.l;
+      val_ptr = ((int *)opt->dest) + opt->arrc;
 
-          return false;
-        }
+      break;
+    case STARK_OPT_TYPE_LONG:
+      *(((long *)opt->dest) + opt->arrc) = val.l;
+      val_ptr = ((long *)opt->dest) + opt->arrc;
 
-        *(((int *)opt->dest) + opt->arrc) = (int)val.l;
-        val_ptr = ((int *)opt->dest) + opt->arrc;
+      break;
+    case STARK_OPT_TYPE_FLOAT:
+      *(((float *)opt->dest) + opt->arrc) = (float)val.d;
+      val_ptr = ((float *)opt->dest) + opt->arrc;
 
-        break;
-      case MBX_OPT_TYPE_LONG:
-        *(((long *)opt->dest) + opt->arrc) = val.l;
-        val_ptr = ((long *)opt->dest) + opt->arrc;
+      break;
+    case STARK_OPT_TYPE_DOUBLE:
+      *(((double *)opt->dest) + opt->arrc) = val.d;
+      val_ptr = ((double *)opt->dest) + opt->arrc;
 
-        break;
-      case MBX_OPT_TYPE_FLOAT:
-        *(((float *)opt->dest) + opt->arrc) = (float)val.d;
-        val_ptr = ((float *)opt->dest) + opt->arrc;
-
-        break;
-      case MBX_OPT_TYPE_DBL:
-        *(((double *)opt->dest) + opt->arrc) = val.d;
-        val_ptr = ((double *)opt->dest) + opt->arrc;
-
-        break;
-      }
-    }
-
-    if (val_ptr != NULL && opt->handler.validate != NULL &&
-        !opt->handler.validate(val_ptr, opt->ctx)) {
-      return false;
-    }
-
-    if ((opt->mods & MBX_OPT_MOD_ARRAY)) {
-      opt->arrc++;
+      break;
     }
   }
+
+  if (val_ptr != NULL && opt->handler.validate != NULL &&
+      !opt->handler.validate(val_ptr, opt->ctx)) {
+    return false;
+  }
+
+  if ((opt->mods & STARK_OPT_MOD_ARRAY)) {
+    opt->arrc++;
   }
 
   return true;
@@ -212,57 +207,57 @@ static inline uint32_t hash_n(const char *restrict str, size_t const n) {
   return h;
 }
 
-MBX_ALWAYS_INLINE MBX_FLATTEN static inline int
-match_longhand(struct mbx_opts *const restrict opts) {
-  struct mbx_opt *restrict o;
+STARK_ALWAYS_INLINE STARK_FLATTEN static inline int
+match_longhand(struct stark_opts *const restrict opts) {
+  struct stark_opt *restrict o;
   char const *const restrict token = opts->_token;
-  char const *const restrict eq = MBX_STRCHR(token, '=');
-  size_t const t_len = eq != NULL ? (size_t)(eq - token) : MBX_STRLEN(token);
-  size_t i = hash_n(token, t_len) & (MBX_OPTS_LH_LUT_SIZE - 1);
+  char const *const restrict eq = STARK_STRCHR(token, '=');
+  size_t const t_len = eq != NULL ? (size_t)(eq - token) : STARK_STRLEN(token);
+  size_t i = hash_n(token, t_len) & (STARK_OPTS_LH_LUT_SIZE - 1);
   size_t probes = 0;
 
   while (true) {
     o = opts->_lh_lut[i];
 
     if (o == NULL) {
-      return MBX_OPT_UNKNOWN;
+      return STARK_OPT_UNKNOWN;
     }
 
-    if ((o->longhand != NULL && (MBX_EXPECT_TRUE(o->long_len == t_len)) &&
-         MBX_EXPECT_TRUE(MBX_MEMCMP(o->longhand, token, t_len) == 0)) ||
-        (o->alias != NULL && MBX_EXPECT_TRUE(o->alias_len == t_len) &&
-         MBX_EXPECT_TRUE(MBX_MEMCMP(o->alias, token, t_len) == 0))) {
+    if ((o->longhand != NULL && (STARK_EXPECT_TRUE(o->_long_len == t_len)) &&
+         STARK_EXPECT_TRUE(STARK_MEMCMP(o->longhand, token, t_len) == 0)) ||
+        (o->alias != NULL && STARK_EXPECT_TRUE(o->_alias_len == t_len) &&
+         STARK_EXPECT_TRUE(STARK_MEMCMP(o->alias, token, t_len) == 0))) {
       break;
     }
 
-    if (++probes == MBX_OPTS_LH_LUT_SIZE) {
-      return MBX_OPT_UNKNOWN;
+    if (++probes == STARK_OPTS_LH_LUT_SIZE) {
+      return STARK_OPT_UNKNOWN;
     }
 
-    i = (i + 1) & (MBX_OPTS_LH_LUT_SIZE - 1);
+    i = (i + 1) & (STARK_OPTS_LH_LUT_SIZE - 1);
   }
 
   opts->_token = eq != NULL ? eq + 1 : NULL;
 
-  return assign_opt(opts, o) ? 0 : MBX_OPT_ASSIGN_FAILED;
+  return assign_opt(opts, o) ? 0 : STARK_OPT_ASSIGN_FAILED;
 }
 
-MBX_ALWAYS_INLINE MBX_FLATTEN static inline int
-match_shorthand(struct mbx_opts *const restrict opts) {
-  struct mbx_opt *restrict o;
+STARK_ALWAYS_INLINE STARK_FLATTEN static inline int
+match_shorthand(struct stark_opts *const restrict opts) {
+  struct stark_opt *restrict o;
   bool const combined = opts->_token[1] != '\0';
 
   while (opts->_token != NULL) {
     o = opts->_sh_lut[(unsigned char)*opts->_token];
 
-    if (MBX_EXPECT_FALSE(o == NULL)) {
-      return MBX_OPT_UNKNOWN;
+    if (STARK_EXPECT_FALSE(o == NULL)) {
+      return STARK_OPT_UNKNOWN;
     }
 
     opts->_token = opts->_token[1] != '\0' ? &opts->_token[1] : NULL;
 
     if (!assign_opt(opts, o)) {
-      return MBX_OPT_ASSIGN_FAILED;
+      return STARK_OPT_ASSIGN_FAILED;
     }
 
     if (!combined) {
@@ -273,18 +268,18 @@ match_shorthand(struct mbx_opts *const restrict opts) {
   return 0;
 }
 
-MBX_COLD static void error(const char *const errstr, ...) {
+STARK_COLD static void error(const char *const errstr, ...) {
   va_list ap;
 
   va_start(ap, errstr);
-  fprintf(stderr, "mbx_opts error: ");
+  fprintf(stderr, "stark_opts error: ");
   vfprintf(stderr, errstr, ap);
   fprintf(stderr, "\n");
   va_end(ap);
 }
 
-MBX_COLD MBX_ALWAYS_INLINE static inline bool
-require(const struct mbx_opt *const restrict opt) {
+STARK_COLD STARK_ALWAYS_INLINE static inline bool
+require(const struct stark_opt *const restrict opt) {
   if (opt->longhand != NULL) {
     error("option '--%s' must have a destination pointer", opt->longhand);
 
@@ -298,60 +293,61 @@ require(const struct mbx_opt *const restrict opt) {
   return true;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
-lh_lut_push(struct mbx_opts *const restrict opts,
-            struct mbx_opt *const restrict opt, bool const is_alias) {
+STARK_COLD STARK_ALWAYS_INLINE STARK_FLATTEN static inline bool
+lh_lut_push(struct stark_opts *const restrict opts,
+            struct stark_opt *const restrict opt, bool const is_alias) {
   bool ok = true;
   char const *const restrict type = is_alias ? "alias" : "longhand";
   char const *const restrict other_type = is_alias ? "longhand" : "alias";
   char const *const restrict str = is_alias ? opt->alias : opt->longhand;
-  size_t i = hash(str) & (MBX_OPTS_LH_LUT_SIZE - 1);
+  size_t i = hash(str) & (STARK_OPTS_LH_LUT_SIZE - 1);
   size_t probes = 0;
 
   while (opts->_lh_lut[i] != NULL) {
-    struct mbx_opt const *prev = opts->_lh_lut[i];
+    struct stark_opt const *prev = opts->_lh_lut[i];
     char const *prev_type = is_alias ? prev->alias : prev->longhand;
     char const *prev_other_type = is_alias ? prev->longhand : prev->alias;
 
-    if (prev_type != NULL && MBX_STRCMP(prev_type, str) == 0) {
+    if (prev_type != NULL && STARK_STRCMP(prev_type, str) == 0) {
       error("duplicate %s '--%s'", type, str);
       ok = false;
     }
 
-    if (prev_other_type != NULL && MBX_STRCMP(prev_other_type, str) == 0) {
+    if (prev_other_type != NULL && STARK_STRCMP(prev_other_type, str) == 0) {
       error("%s '--%s' shadows %s '--%s'", type, str, other_type,
             prev_other_type);
 
       ok = false;
     }
 
-    if (++probes == MBX_OPTS_LH_LUT_SIZE) {
-      error("longhand lookup table is full; define MBX_OPTS_LH_LUT_SIZE before "
-            "inclusion with a greater limit or remove options");
+    if (++probes == STARK_OPTS_LH_LUT_SIZE) {
+      error(
+          "longhand lookup table is full; define STARK_OPTS_LH_LUT_SIZE before "
+          "inclusion with a greater limit or remove options");
 
       ok = false;
       break;
     }
 
-    i = (i + 1) & (MBX_OPTS_LH_LUT_SIZE - 1);
+    i = (i + 1) & (STARK_OPTS_LH_LUT_SIZE - 1);
   }
 
   opts->_lh_lut[i] = opt;
   return ok;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
-populate_longhand_lut(struct mbx_opts *const restrict opts,
-                      struct mbx_opt *const restrict opt) {
+STARK_COLD STARK_ALWAYS_INLINE STARK_FLATTEN static inline bool
+populate_longhand_lut(struct stark_opts *const restrict opts,
+                      struct stark_opt *const restrict opt) {
   bool ok = true;
 
-  // MBX_STRLEN() is used here to precalculate lengths so that it's not
-  // called in the hot path. if the length is greater than 255, its still used
+  // STARK_STRLEN() is used here to precalculate lengths so that it's not
+  // called in the hot path. If the length is greater than 255, it's still used
   // as a fallback, but that is a very unlikely case.
   if (opt->longhand != NULL) {
     ok &= lh_lut_push(opts, opt, false);
 
-    if ((opt->long_len = (uint8_t)MBX_STRLEN(opt->longhand)) > 63) {
+    if ((opt->_long_len = (uint8_t)STARK_STRLEN(opt->longhand)) > 63) {
       error("longhand `--%s` exceeds max character limit of 63 characters",
             opt->longhand);
 
@@ -362,7 +358,7 @@ populate_longhand_lut(struct mbx_opts *const restrict opts,
   if (opt->alias != NULL) {
     ok &= lh_lut_push(opts, opt, true);
 
-    if ((opt->alias_len = (uint8_t)MBX_STRLEN(opt->alias)) > 63) {
+    if ((opt->_alias_len = (uint8_t)STARK_STRLEN(opt->alias)) > 63) {
       error("alias `--%s` exceeds max character limit of 63 characters",
             opt->alias);
 
@@ -373,31 +369,31 @@ populate_longhand_lut(struct mbx_opts *const restrict opts,
   return ok;
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
-register_opt(struct mbx_opts *const restrict opts,
-             struct mbx_opt *const restrict opt) {
+STARK_COLD STARK_ALWAYS_INLINE STARK_FLATTEN static inline bool
+register_opt(struct stark_opts *const restrict opts,
+             struct stark_opt *const restrict opt) {
   bool ok = true;
 
-  if (opt->mods & MBX_OPT_MOD_POSITIONAL) {
+  if (opt->mods & STARK_OPT_MOD_POSITIONAL) {
     // Same reasoning here as for regular flags, precalculate the length to
     // minimize function calls in the hot path.
-    if (opt->type == MBX_OPT_TYPE_SUBCOMMAND) {
+    if (opt->type == STARK_OPT_TYPE_SUBCOMMAND) {
       if (opt->usage == NULL) {
         error("positional subcommands must have a usage (name)");
 
         ok = false;
       } else {
-        opt->long_len = MBX_STRLEN(opt->usage);
+        opt->_long_len = STARK_STRLEN(opt->usage);
       }
-    } else if (opt->type == MBX_OPT_TYPE_BOOL) {
+    } else if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
       error("positional mod cannot be combined with boolean type");
 
       ok = false;
     }
 
-    if (opts->_posc == MBX_OPTS_POS_LUT_SIZE) {
+    if (opts->_posc == STARK_OPTS_POS_LUT_SIZE) {
       error("positional argument count exceeds limit; define "
-            "MBX_OPTS_POS_LUT_SIZE before inclusion with a greater limit or "
+            "STARK_OPTS_POS_LUT_SIZE before inclusion with a greater limit or "
             "remove "
             "options");
 
@@ -408,7 +404,7 @@ register_opt(struct mbx_opts *const restrict opts,
 
     return ok;
   } else if (opt->shorthand == '\0' && opt->longhand == NULL) {
-    error("non-positonal options must have either a shorthand or longhand");
+    error("non-positional options must have either a shorthand or longhand");
 
     ok = false;
   }
@@ -429,8 +425,8 @@ register_opt_longhand:
   return ok &= populate_longhand_lut(opts, opt);
 }
 
-MBX_COLD MBX_ALWAYS_INLINE MBX_FLATTEN static inline bool
-validate_opt(struct mbx_opt *const restrict opt) {
+STARK_COLD STARK_ALWAYS_INLINE STARK_FLATTEN static inline bool
+validate_opt(struct stark_opt *const restrict opt) {
   if (opt->assign != NULL) {
     if (opt->dest == NULL && !require(opt)) {
       return false;
@@ -442,18 +438,18 @@ validate_opt(struct mbx_opt *const restrict opt) {
   }
 
   switch (opt->type) {
-  case MBX_OPT_TYPE_STR:
-  case MBX_OPT_TYPE_DBL:
-  case MBX_OPT_TYPE_FLOAT:
-  case MBX_OPT_TYPE_LONG:
-  case MBX_OPT_TYPE_INT:
-  case MBX_OPT_TYPE_BOOL:
+  case STARK_OPT_TYPE_STRING:
+  case STARK_OPT_TYPE_DOUBLE:
+  case STARK_OPT_TYPE_FLOAT:
+  case STARK_OPT_TYPE_LONG:
+  case STARK_OPT_TYPE_INTEGER:
+  case STARK_OPT_TYPE_BOOLEAN:
     if (opt->dest == NULL && !require(opt)) {
       return false;
     }
 
     break;
-  case MBX_OPT_TYPE_SUBCOMMAND:
+  case STARK_OPT_TYPE_SUBCOMMAND:
     if (opt->ctx == NULL) {
       error("subcommands must have a context");
 
@@ -461,7 +457,7 @@ validate_opt(struct mbx_opt *const restrict opt) {
     }
 
     break;
-  case MBX_OPT_TYPE_HELP:
+  case STARK_OPT_TYPE_HELP:
     break;
   default:
     error("invalid type for option '%d'", opt->type);
@@ -472,34 +468,35 @@ validate_opt(struct mbx_opt *const restrict opt) {
   return true;
 }
 
-MBX_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts) {
+STARK_COLD bool stark_opts_init(struct stark_opts *const restrict opts) {
   bool ok = true;
 
   if (opts == NULL) {
-    error("mbx_opts_init: opts cannot be null");
+    error("stark_opts_init: opts cannot be null");
 
     return false;
   } else if (opts->optc == 0) {
-    error("mbx_opts_init: optc cannot be zero");
+    error("stark_opts_init: optc cannot be zero");
 
     return false;
   } else if (opts->optv == NULL) {
-    error("mbx_opts_init: optv cannot be null");
+    error("stark_opts_init: optv cannot be null");
 
     return false;
-  } else if (!(ok = (MBX_OPTS_LH_LUT_SIZE & (MBX_OPTS_LH_LUT_SIZE - 1)) == 0)) {
-    error("mbx_opts_init: MBX_OPTS_LH_LUT_SIZE must be a power of two");
+  } else if (!(ok = (STARK_OPTS_LH_LUT_SIZE & (STARK_OPTS_LH_LUT_SIZE - 1)) ==
+                    0)) {
+    error("stark_opts_init: STARK_OPTS_LH_LUT_SIZE must be a power of two");
   } else if (opts->_verified) {
-    error("mbx_opts_init: already verified");
+    error("stark_opts_init: already verified");
 
     return true;
   }
 
   for (int i = 0; i < opts->optc; i++) {
-    struct mbx_opt *const restrict o = &opts->optv[i];
+    struct stark_opt *const restrict o = &opts->optv[i];
 
-    // &= is used here to set ok only if either function returned false,
-    // otherwise the state wouldnt be perserved across options
+    // &= is used here to perserve the state of ok after each iteration. If ok
+    // is false it will remain false regardless of what either function returns.
     ok &= validate_opt(o);
     ok &= register_opt(opts, o);
   }
@@ -507,10 +504,10 @@ MBX_COLD bool mbx_opts_init(struct mbx_opts *const restrict opts) {
   return opts->_verified = ok;
 }
 
-bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
-                    char const **const restrict argv) {
+bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
+                      char const **const restrict argv) {
   if (!opts->_verified) {
-    error("not verified, did you forget 'mbx_opts_init'?");
+    error("not verified, did you forget 'stark_opts_init'?");
 
     return false;
   }
@@ -520,6 +517,10 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
 
   opts->_argc = argc - 1;
   opts->_argv = argv + 1;
+
+  for (int i = 0; i < opts->optc; i++) {
+    opts->optv[i].arrc = 0;
+  }
 
   for (; opts->_argc > 0; opts->_argc--, opts->_argv++) {
     char const *arg = *opts->_argv;
@@ -533,17 +534,18 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
     // positionals or "greedy" ones
     if (greedy_pos || arg[0] != '-' || arg[1] == '\0') {
       if (opts->_posc == 0 || pos_idx >= opts->_posc) {
-        goto mbx_opts_parse_unknown_option;
+        goto stark_opts_parse_unknown_option;
       }
 
-      struct mbx_opt *const restrict o = opts->_pos_lut[pos_idx];
+      struct stark_opt *const restrict o = opts->_pos_lut[pos_idx];
 
-      if (o->type == MBX_OPT_TYPE_SUBCOMMAND) {
-        size_t arg_len = MBX_STRLEN(arg);
+      if (o->type == STARK_OPT_TYPE_SUBCOMMAND) {
+        size_t arg_len = STARK_STRLEN(arg);
 
-        if (!(o->long_len == arg_len &&
-              MBX_EXPECT_TRUE(MBX_MEMCMP(arg, o->usage, o->long_len) == 0))) {
-          goto mbx_opts_parse_unknown_option;
+        if (!(o->_long_len == arg_len &&
+              STARK_EXPECT_TRUE(STARK_MEMCMP(arg, o->usage, o->_long_len) ==
+                                0))) {
+          goto stark_opts_parse_unknown_option;
         }
       }
 
@@ -551,7 +553,7 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
         // The reason this branch is here rather than just in the above if
         // statement is because otherwise a failed assignment wouldn't fall
         // through to the else block
-        if (o->mods & MBX_OPT_MOD_ARRAY) {
+        if (o->mods & STARK_OPT_MOD_ARRAY) {
           greedy_pos = true;
         }
       } else {
@@ -571,10 +573,10 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
       switch (match_shorthand(opts)) {
       case 0:
         break;
-      case MBX_OPT_ASSIGN_FAILED:
+      case STARK_OPT_ASSIGN_FAILED:
         return false;
-      case MBX_OPT_UNKNOWN:
-        goto mbx_opts_parse_unknown_option;
+      case STARK_OPT_UNKNOWN:
+        goto stark_opts_parse_unknown_option;
       }
 
       continue;
@@ -592,30 +594,27 @@ bool mbx_opts_parse(struct mbx_opts *const restrict opts, int const argc,
     switch (match_longhand(opts)) {
     case 0:
       break;
-    case MBX_OPT_ASSIGN_FAILED:
+    case STARK_OPT_ASSIGN_FAILED:
       return false;
-    case MBX_OPT_UNKNOWN:
-      goto mbx_opts_parse_unknown_option;
+    case STARK_OPT_UNKNOWN:
+      goto stark_opts_parse_unknown_option;
     }
 
     continue;
 
-  mbx_opts_parse_unknown_option:
+  stark_opts_parse_unknown_option:
     fprintf(stderr, "unknown option: %s\n", arg);
     return false;
   }
 
   for (int i = 0; i < opts->optc; i++) {
-    struct mbx_opt *const o = &opts->optv[i];
+    struct stark_opt *const o = &opts->optv[i];
 
-    o->arrc = 0;
-
-    if (o->mods & MBX_OPT_MOD_REQUIRED && !(o->mods & MBX_OPT_FOUND)) {
+    if (o->mods & STARK_OPT_MOD_REQUIRED && !(o->mods & STARK_OPT_FOUND)) {
       return false; // required not found
     }
 
-    o->mods &= ~MBX_OPT_FOUND;
+    o->mods &= ~STARK_OPT_FOUND;
   }
 
   return true;
-}

@@ -13,18 +13,18 @@ int main(void) {
   };
   // clang-format on
 
-  struct mbx_opts opts = {
+  struct stark_opts opts = {
       .desc = "positional test", .optc = optc, .optv = optv};
 
-  if (!mbx_opts_init(&opts)) {
+  if (!stark_opts_init(&opts)) {
     return 1;
   }
 
-  if (!mbx_opts_init(&subcommand)) {
+  if (!stark_opts_init(&subcommand)) {
     return 2;
   }
 
-  if (!mbx_opts_parse(&opts, ARRAY_LENGTH(argv), argv)) {
+  if (!stark_opts_parse(&opts, ARRAY_LENGTH(argv), argv)) {
     return 3;
   }
 

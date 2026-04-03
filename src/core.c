@@ -1,5 +1,5 @@
 //
-// libmbx - a C99+ utility library - mbx_core - freestanding compatible libc
+// stark - a C99+ utility library - stark_core - freestanding compatible libc
 // replacement
 // Copyright (C) 2026  marrcaburgh
 //
@@ -18,4 +18,4 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 //
 
-#include "mbx/core.h"
+#include "stark/core.h"
