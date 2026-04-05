@@ -297,8 +297,8 @@ extern "C" {
 #define STARK_DESTRUCTOR
 #define STARK_EXPECT_TRUE(x) (x)
 #define STARK_EXPECT_FALSE(x) (x)
-#define STARK_UNREACHABLE() (*(volatile int *)NULL = NULL)
-#define STARK_TRAP() (*(volatile int *)NULL = NULL)
+#define STARK_UNREACHABLE() (*(volatile int *)NULL = 0)
+#define STARK_TRAP() (*(volatile int *)NULL = 0)
 #define STARK_DEBUGTRAP() ((void)NULL)
 
 static inline void _stark_memcpy(void *dst, void const *src, size_t n) {
@@ -355,6 +355,8 @@ static inline size_t _stark_strlen(char const *restrict str) {
       return len;
     }
   }
+
+  STARK_UNREACHABLE();
 }
 
 #define STARK_STRLEN(s) _stark_strlen((s))
@@ -368,6 +370,8 @@ static inline char const *_stark_strchr(char const *restrict str,
       return NULL;
     }
   }
+
+  STARK_UNREACHABLE();
 }
 
 #define STARK_STRCHR(s, c) _stark_strchr(s, c)

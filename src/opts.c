@@ -298,24 +298,25 @@ lh_lut_push(struct stark_opts *const restrict opts,
             struct stark_opt *const restrict opt, bool const is_alias) {
   bool ok = true;
   char const *const restrict type = is_alias ? "alias" : "longhand";
-  char const *const restrict other_type = is_alias ? "longhand" : "alias";
+  char const *const restrict opposite_type = is_alias ? "longhand" : "alias";
   char const *const restrict str = is_alias ? opt->alias : opt->longhand;
   size_t i = hash(str) & (STARK_OPTS_LH_LUT_SIZE - 1);
   size_t probes = 0;
 
   while (opts->_lh_lut[i] != NULL) {
     struct stark_opt const *prev = opts->_lh_lut[i];
-    char const *prev_type = is_alias ? prev->alias : prev->longhand;
-    char const *prev_other_type = is_alias ? prev->longhand : prev->alias;
+    char const *prev_str = is_alias ? prev->alias : prev->longhand;
+    char const *prev_opposite_str = is_alias ? prev->longhand : prev->alias;
 
-    if (prev_type != NULL && STARK_STRCMP(prev_type, str) == 0) {
+    if (prev_str != NULL && STARK_STRCMP(prev_str, str) == 0) {
       error("duplicate %s '--%s'", type, str);
       ok = false;
     }
 
-    if (prev_other_type != NULL && STARK_STRCMP(prev_other_type, str) == 0) {
-      error("%s '--%s' shadows %s '--%s'", type, str, other_type,
-            prev_other_type);
+    if (prev_opposite_str != NULL &&
+        STARK_STRCMP(prev_opposite_str, str) == 0) {
+      error("%s '--%s' shadows %s '--%s'", type, str, opposite_type,
+            prev_opposite_str);
 
       ok = false;
     }
@@ -471,24 +472,10 @@ validate_opt(struct stark_opt *const restrict opt) {
 STARK_COLD bool stark_opts_init(struct stark_opts *const restrict opts) {
   bool ok = true;
 
-  if (opts == NULL) {
-    error("stark_opts_init: opts cannot be null");
-
-    return false;
-  } else if (opts->optc == 0) {
-    error("stark_opts_init: optc cannot be zero");
-
-    return false;
-  } else if (opts->optv == NULL) {
-    error("stark_opts_init: optv cannot be null");
-
-    return false;
-  } else if (!(ok = (STARK_OPTS_LH_LUT_SIZE & (STARK_OPTS_LH_LUT_SIZE - 1)) ==
-                    0)) {
-    error("stark_opts_init: STARK_OPTS_LH_LUT_SIZE must be a power of two");
+  if (opts == NULL || opts->optc == 0 || opts->optv == NULL ||
+      !(ok = ((STARK_OPTS_LH_LUT_SIZE & (STARK_OPTS_LH_LUT_SIZE - 1)) == 0))) {
+    STARK_TRAP();
   } else if (opts->_verified) {
-    error("stark_opts_init: already verified");
-
     return true;
   }
 
@@ -507,25 +494,27 @@ STARK_COLD bool stark_opts_init(struct stark_opts *const restrict opts) {
 bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
                       char const **const restrict argv) {
   if (!opts->_verified) {
-    error("not verified, did you forget 'stark_opts_init'?");
-
-    return false;
+    STARK_TRAP();
   }
 
   uint8_t pos_idx = 0;
   bool greedy_pos = false;
 
+  // This is here to skip argv[0] which is usually the program name
   opts->_argc = argc - 1;
   opts->_argv = argv + 1;
 
   for (int i = 0; i < opts->optc; i++) {
-    opts->optv[i].arrc = 0;
+    stark_opt *o = &opts->optv[i];
+
+    o->mods &= ~STARK_OPT_FOUND;
+    o->arrc = 0;
   }
 
   for (; opts->_argc > 0; opts->_argc--, opts->_argv++) {
     char const *arg = *opts->_argv;
 
-    // This is here to skip any invalid arguments the OS may have put into argv.
+    // This is here to skip any invalid arguments the OS may have put into argv
     if (arg == NULL || arg[0] == '\0') {
       continue;
     }
@@ -582,6 +571,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
       continue;
     }
 
+    // This is here to stop parsing if a standalone `--` was encountered
     if (arg[2] == '\0') {
       opts->_argc--;
       opts->_argv++;
@@ -613,8 +603,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
     if (o->mods & STARK_OPT_MOD_REQUIRED && !(o->mods & STARK_OPT_FOUND)) {
       return false; // required not found
     }
-
-    o->mods &= ~STARK_OPT_FOUND;
   }
 
   return true;
+}
