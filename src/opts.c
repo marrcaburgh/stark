@@ -38,8 +38,8 @@ usage(STARK_UNUSED const struct stark_opt *const restrict opt) {
 }
 
 STARK_COLD STARK_ALWAYS_INLINE static inline void
-help(STARK_UNUSED struct stark_opts *const restrict opts,
-     STARK_UNUSED stark_opt_callback const cb) {
+help(STARK_UNUSED struct stark_opts *const restrict opts) {
+  // STARK_UNUSED stark_opt_callback const cb) {
   // TODO: print help
 }
 
@@ -55,7 +55,7 @@ assign_opt(struct stark_opts *const restrict opts,
   opt->mods |= STARK_OPT_FOUND;
 
   if (opt->type == STARK_OPT_TYPE_HELP) {
-    help(opts, opt->handler.callback);
+    help(opts);
 
     return true;
   } else if (opt->handler.callback != NULL) {
@@ -185,7 +185,7 @@ assign_opt_skip_arg:
   return true;
 }
 
-static inline uint32_t hash(const char *restrict str) {
+STARK_ALWAYS_INLINE static inline uint32_t hash(const char *restrict str) {
   uint32_t h = 2166136261u;
 
   while (*str != '\0') {
@@ -196,7 +196,8 @@ static inline uint32_t hash(const char *restrict str) {
   return h;
 }
 
-static inline uint32_t hash_n(const char *restrict str, size_t const n) {
+STARK_ALWAYS_INLINE static inline uint32_t hash_n(const char *restrict str,
+                                                  size_t const n) {
   uint32_t h = 2166136261u;
 
   for (size_t i = 0; i < n; i++) {
@@ -452,7 +453,8 @@ validate_opt(struct stark_opt *const restrict opt) {
     break;
   case STARK_OPT_TYPE_SUBCOMMAND:
     if (opt->ctx == NULL) {
-      error("subcommands must have a context");
+      error("subcommand option missing context"); // placeholder
+                                                  // developer-facing error
 
       return false;
     }
@@ -461,7 +463,7 @@ validate_opt(struct stark_opt *const restrict opt) {
   case STARK_OPT_TYPE_HELP:
     break;
   default:
-    error("invalid type for option '%d'", opt->type);
+    error("invalid option type"); // placeholder developer-facing error
 
     return false;
   }
@@ -505,7 +507,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
   opts->_argv = argv + 1;
 
   for (int i = 0; i < opts->optc; i++) {
-    stark_opt *o = &opts->optv[i];
+    struct stark_opt *o = &opts->optv[i];
 
     o->mods &= ~STARK_OPT_FOUND;
     o->arrc = 0;

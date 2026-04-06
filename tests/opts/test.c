@@ -27,6 +27,7 @@ double d, f, g, h, j, k;
 const char *l, *z, *x, *c, *v, *b;
 
 struct stark_opt optv[] = {
+    {.type = STARK_OPT_TYPE_HELP, .shorthand = 'h', .longhand = "help"},
     {.type = STARK_OPT_TYPE_BOOLEAN, .shorthand = 'q', .dest = &q},
     {.type = STARK_OPT_TYPE_BOOLEAN, .shorthand = 'w', .dest = &w},
     {.type = STARK_OPT_TYPE_BOOLEAN, .shorthand = 'e', .dest = &e},
