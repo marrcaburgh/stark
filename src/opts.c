@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define STARK_OPT_UNKNOWN 2
 #define STARK_OPT_ASSIGN_FAILED 1
@@ -109,7 +110,8 @@ assign_opt_skip_arg:
     }
 
   } else if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
-    *(((bool *)opt->dest) + opt->arrc) = !*(((bool *)opt->dest) + opt->arrc);
+    *(((bool *)opt->dest) + opt->arrc) = !(opt->mods & STARK_OPT_MOD_SET_FALSE);
+
     val_ptr = ((bool *)opt->dest) + opt->arrc;
   } else if (opt->type == STARK_OPT_TYPE_STRING) {
     *(((char const **)opt->dest) + opt->arrc) = str;
@@ -212,8 +214,8 @@ STARK_ALWAYS_INLINE STARK_FLATTEN static inline int
 match_longhand(struct stark_opts *const restrict opts) {
   struct stark_opt *restrict o;
   char const *const restrict token = opts->_token;
-  char const *const restrict eq = STARK_STRCHR(token, '=');
-  size_t const t_len = eq != NULL ? (size_t)(eq - token) : STARK_STRLEN(token);
+  char const *const restrict eq = strchr(token, '=');
+  size_t const t_len = eq != NULL ? (size_t)(eq - token) : strlen(token);
   size_t i = hash_n(token, t_len) & (STARK_OPTS_LH_LUT_SIZE - 1);
   size_t probes = 0;
 
@@ -225,9 +227,9 @@ match_longhand(struct stark_opts *const restrict opts) {
     }
 
     if ((o->longhand != NULL && (STARK_EXPECT_TRUE(o->_long_len == t_len)) &&
-         STARK_EXPECT_TRUE(STARK_MEMCMP(o->longhand, token, t_len) == 0)) ||
+         STARK_EXPECT_TRUE(memcmp(o->longhand, token, t_len) == 0)) ||
         (o->alias != NULL && STARK_EXPECT_TRUE(o->_alias_len == t_len) &&
-         STARK_EXPECT_TRUE(STARK_MEMCMP(o->alias, token, t_len) == 0))) {
+         STARK_EXPECT_TRUE(memcmp(o->alias, token, t_len) == 0))) {
       break;
     }
 
@@ -309,13 +311,12 @@ lh_lut_push(struct stark_opts *const restrict opts,
     char const *prev_str = is_alias ? prev->alias : prev->longhand;
     char const *prev_opposite_str = is_alias ? prev->longhand : prev->alias;
 
-    if (prev_str != NULL && STARK_STRCMP(prev_str, str) == 0) {
+    if (prev_str != NULL && strcmp(prev_str, str) == 0) {
       error("duplicate %s '--%s'", type, str);
       ok = false;
     }
 
-    if (prev_opposite_str != NULL &&
-        STARK_STRCMP(prev_opposite_str, str) == 0) {
+    if (prev_opposite_str != NULL && strcmp(prev_opposite_str, str) == 0) {
       error("%s '--%s' shadows %s '--%s'", type, str, opposite_type,
             prev_opposite_str);
 
@@ -341,31 +342,24 @@ lh_lut_push(struct stark_opts *const restrict opts,
 STARK_COLD STARK_ALWAYS_INLINE STARK_FLATTEN static inline bool
 populate_longhand_lut(struct stark_opts *const restrict opts,
                       struct stark_opt *const restrict opt) {
+  size_t len;
   bool ok = true;
 
-  // STARK_STRLEN() is used here to precalculate lengths so that it's not
+  // strlen() is used here to precalculate lengths so that it's not
   // called in the hot path. If the length is greater than 255, it's still used
   // as a fallback, but that is a very unlikely case.
   if (opt->longhand != NULL) {
     ok &= lh_lut_push(opts, opt, false);
-
-    if ((opt->_long_len = (uint8_t)STARK_STRLEN(opt->longhand)) > 63) {
-      error("longhand `--%s` exceeds max character limit of 63 characters",
-            opt->longhand);
-
-      ok = false;
-    }
+    len = strlen(opt->longhand);
+    ok &= (len <= 63);
+    opt->_long_len = len;
   }
 
   if (opt->alias != NULL) {
     ok &= lh_lut_push(opts, opt, true);
-
-    if ((opt->_alias_len = (uint8_t)STARK_STRLEN(opt->alias)) > 63) {
-      error("alias `--%s` exceeds max character limit of 63 characters",
-            opt->alias);
-
-      ok = false;
-    }
+    len = strlen(opt->alias);
+    ok &= (len <= 63);
+    opt->_alias_len = len;
   }
 
   return ok;
@@ -385,7 +379,7 @@ register_opt(struct stark_opts *const restrict opts,
 
         ok = false;
       } else {
-        opt->_long_len = STARK_STRLEN(opt->usage);
+        opt->_long_len = strlen(opt->usage);
       }
     } else if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
       error("positional mod cannot be combined with boolean type");
@@ -500,7 +494,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
   }
 
   uint8_t pos_idx = 0;
-  bool greedy_pos = false;
+  bool array_pos = false, nop = false;
 
   // This is here to skip argv[0] which is usually the program name
   opts->_argc = argc - 1;
@@ -516,26 +510,26 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
   for (; opts->_argc > 0; opts->_argc--, opts->_argv++) {
     char const *arg = *opts->_argv;
 
-    // This is here to skip any invalid arguments the OS may have put into argv
+    // This is here to skip any invalid arguments the OS may have put into
+    // argv
     if (arg == NULL || arg[0] == '\0') {
       continue;
     }
 
     // The reason greedy_pos is here is to skip flag checking for array
     // positionals or "greedy" ones
-    if (greedy_pos || arg[0] != '-' || arg[1] == '\0') {
+    if (nop || array_pos || arg[0] != '-' || arg[1] == '\0') {
       if (opts->_posc == 0 || pos_idx >= opts->_posc) {
         goto stark_opts_parse_unknown_option;
       }
 
       struct stark_opt *const restrict o = opts->_pos_lut[pos_idx];
 
-      if (o->type == STARK_OPT_TYPE_SUBCOMMAND) {
-        size_t arg_len = STARK_STRLEN(arg);
+      if (nop == false && o->type == STARK_OPT_TYPE_SUBCOMMAND) {
+        size_t arg_len = strlen(arg);
 
         if (!(o->_long_len == arg_len &&
-              STARK_EXPECT_TRUE(STARK_MEMCMP(arg, o->usage, o->_long_len) ==
-                                0))) {
+              STARK_EXPECT_TRUE(memcmp(arg, o->usage, o->_long_len) == 0))) {
           goto stark_opts_parse_unknown_option;
         }
       }
@@ -545,13 +539,13 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
         // statement is because otherwise a failed assignment wouldn't fall
         // through to the else block
         if (o->mods & STARK_OPT_MOD_ARRAY) {
-          greedy_pos = true;
+          array_pos = true;
         }
       } else {
         return false;
       }
 
-      if (!greedy_pos) {
+      if (!array_pos) {
         pos_idx++;
       }
 
@@ -573,12 +567,10 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
       continue;
     }
 
-    // This is here to stop parsing if a standalone `--` was encountered
     if (arg[2] == '\0') {
-      opts->_argc--;
-      opts->_argv++;
+      nop = true;
 
-      break;
+      continue;
     }
 
     opts->_token = arg + 2;

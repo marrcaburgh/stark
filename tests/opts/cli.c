@@ -7,8 +7,12 @@ int main(int const argc, char const **argv) {
     return 1;
   }
 
-  if (!stark_opts_parse(&opts, argc, argv)) {
+  if (!stark_opts_init(&subcommand)) {
     return 2;
+  }
+
+  if (!stark_opts_parse(&opts, argc, argv)) {
+    return 3;
   }
 
   print_shorthand();

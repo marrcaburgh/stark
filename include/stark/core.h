@@ -1,6 +1,6 @@
 //
-// stark - a C99+ utility library - stark_core - freestanding compatible libc
-// replacement
+// stark - a C99+ utility library - stark_core - freestanding compatible
+// compiler intrinsic/builtin macro hub
 // Copyright (C) 2026  marrcaburgh
 //
 // This library is free software; you can redistribute it and/or
@@ -225,19 +225,6 @@ extern "C" {
 #define STARK_ASSUME(cond) __builtin_assume((cond))
 #define STARK_CONSTANT_P(x) __builtin_constant_p((x))
 
-// Memory
-#define STARK_MEMCPY(dst, src, n) __builtin_memcpy((dst), (src), (n))
-#define STARK_MEMMOVE(dst, src, n) __builtin_memmove((dst), (src), (n))
-#define STARK_MEMSET(dst, val, n) __builtin_memset((dst), (val), (n))
-#define STARK_MEMCMP(a, b, n) __builtin_memcmp((a), (b), (n))
-#define STARK_MEMCHR(s, c, n) __builtin_memchr((s), (c), (n))
-
-// Strings
-#define STARK_STRLEN(s) __builtin_strlen((s))
-#define STARK_STRCHR(s, c) (char const *)__builtin_strchr((s), (c))
-#define STARK_STRCMP(s1, s2) __builtin_strcmp((s1), (s2))
-#define STARK_STRNCMP(s1, s2, n) __builtin_strncmp((s1), (s2), (n))
-
 // Branch hints
 #define STARK_EXPECT_TRUE(x) __builtin_expect(!!(x), 1)
 #define STARK_EXPECT_FALSE(x) __builtin_expect(!!(x), 0)
@@ -300,100 +287,6 @@ extern "C" {
 #define STARK_UNREACHABLE() (*(volatile int *)NULL = 0)
 #define STARK_TRAP() (*(volatile int *)NULL = 0)
 #define STARK_DEBUGTRAP() ((void)NULL)
-
-static inline void _stark_memcpy(void *dst, void const *src, size_t n) {
-  uint8_t const *restrict s = (uint8_t const *)src;
-
-  for (uint8_t *restrict d = dst; n-- > 0; *d++ = *s++)
-    ;
-}
-
-#define STARK_MEMCPY(dst, src, n) _stark_memcpy((dst), (src), (n))
-
-static inline void _stark_memmove(void *dst, void const *src, size_t n) {
-  uint8_t *d = dst;
-  uint8_t const *s = src;
-
-  if (d < s) {
-    for (; n-- > 0; *d++ = *s++)
-      ;
-  } else {
-    d += n;
-    s += n;
-
-    for (; n-- > 0; *--d = *--s)
-      ;
-  }
-}
-
-#define STARK_MEMMOVE(dst, src, n) _stark_memmove((dst), (src), (n))
-
-static inline void _stark_memset(void *restrict dst, int val, size_t n) {
-  for (uint8_t *d = dst; n-- > 0; *d++ = (uint8_t)val)
-    ;
-}
-
-#define STARK_MEMSET(dst, val, n) _stark_memset((dst), (val), (n))
-
-static inline int _stark_memcmp(void const *restrict p1,
-                                void const *restrict p2, size_t n) {
-  for (uint8_t const *restrict u1 = p1, *restrict u2 = p2; n-- > 0;
-       u1++, u2++) {
-    if (*u1 != *u2) {
-      return *u1 - *u2;
-    }
-  }
-
-  return 0;
-}
-
-#define STARK_MEMCMP(a, b, n) _stark_memcmp((a), (b), (n))
-
-static inline size_t _stark_strlen(char const *restrict str) {
-  for (size_t len = 0;; len++) {
-    if (str[len] == '\0') {
-      return len;
-    }
-  }
-
-  STARK_UNREACHABLE();
-}
-
-#define STARK_STRLEN(s) _stark_strlen((s))
-
-static inline char const *_stark_strchr(char const *restrict str,
-                                        char const c) {
-  for (;; str++) {
-    if (*str == c) {
-      return str;
-    } else if (*str == '\0') {
-      return NULL;
-    }
-  }
-
-  STARK_UNREACHABLE();
-}
-
-#define STARK_STRCHR(s, c) _stark_strchr(s, c)
-
-static inline int _stark_strcmp(char const *s1, char const *s2) {
-  uint8_t const *restrict u1 = (uint8_t const *)s1, *restrict u2 =
-                                                        (uint8_t const *)s2;
-
-  for (int d;; u1++, u2++) {
-    d = *u1 - *u2;
-
-    if (d != 0) {
-      return d;
-    } else if (*u1 == '\0') {
-      break;
-    }
-  }
-
-  return 0;
-}
-
-#define STARK_STRCMP(s1, s2) _stark_strcmp(s1, s2)
 
 #endif // STARK_COMPILER_GCC_LIKE
 

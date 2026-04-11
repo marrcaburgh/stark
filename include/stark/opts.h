@@ -70,18 +70,19 @@ typedef enum stark_opt_mod_type {
   STARK_OPT_MOD_POSITIONAL = 0x02,
   STARK_OPT_MOD_REQUIRED = 0x04,
   STARK_OPT_MOD_HIDDEN = 0x08,
-  STARK_OPT_FOUND = 0x10,
+  STARK_OPT_MOD_SET_FALSE = 0x10,
+  STARK_OPT_FOUND = 0x80,
 } stark_opt_mod_type;
 
 typedef struct stark_opt {
-  uint8_t type;                        // 1 byte (4 bits free)
-  uint8_t mods;                        // 1 byte (3 bits free)
-  uint8_t arrc;                        // 1 byte
-  uint8_t const arrl;                  // 1 byte
-  char const delim;                    // 1 byte
-  unsigned char const shorthand;       // 1 byte
-  uint8_t _long_len;                   // 1 byte (2 bits free)
-  uint8_t _alias_len;                  // 1 byte (2 bits free)
+  uint8_t type;                  // 1 byte (4 bits free: 0x10, 0x20, 0x40, 0x80)
+  uint8_t mods;                  // 1 byte (2 bits free: 0x20, 0x40)
+  uint8_t arrc;                  // 1 byte
+  uint8_t const arrl;            // 1 byte
+  char const delim;              // 1 byte
+  unsigned char const shorthand; // 1 byte
+  uint8_t _long_len;             // 1 byte (2 bits free: 0x40, 0x80)
+  uint8_t _alias_len;            // 1 byte (2 bits free: 0x40, 0x80)
   char const *const restrict longhand; // 8 bytes
   char const *const restrict alias;    // 8 bytes
   void *const restrict dest;           // 8 bytes
@@ -100,7 +101,7 @@ typedef struct stark_opts {
   struct stark_opt *_sh_lut[256];
   struct stark_opt *_lh_lut[STARK_OPTS_LH_LUT_SIZE];
   struct stark_opt *_pos_lut[STARK_OPTS_POS_LUT_SIZE];
-  struct starK_opt *_psc_lut[1];
+  struct stark_opt *_psc_lut[1];
   char const *restrict _token;
   char const **_argv;
   struct stark_opt *const restrict optv;
