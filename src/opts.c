@@ -19,6 +19,7 @@
 //
 
 #include "stark/opts.h"
+#include "stark/core.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -69,7 +70,7 @@ assign_opt(struct stark_opts *const restrict opts,
   void *val_ptr = NULL;
 
   if (opt->type == STARK_OPT_TYPE_SUBCOMMAND) {
-    if (!run_subcommand(opts, opt)) {
+    if (STARK_EXPECT_FALSE(!run_subcommand(opts, opt))) {
       return false;
     }
 
@@ -77,7 +78,7 @@ assign_opt(struct stark_opts *const restrict opts,
     return true;
   }
 
-  if ((opt->mods & STARK_OPT_MOD_ARRAY) && opt->arrc == opt->arrl) {
+  if ((opt->mods & STARK_OPT_MOD_ARRAY) && STARK_EXPECT_FALSE(opt->arrc == opt->arrl)) {
     fprintf(stderr, "array out of bounds\n");
 
     return false;
@@ -105,13 +106,12 @@ assign_opt(struct stark_opts *const restrict opts,
 
 assign_opt_skip_arg:
   if (opt->assign != NULL) {
-    if (!opt->assign(str, opt->dest, opt->arrc)) {
+    if (STARK_EXPECT_FALSE(!opt->assign(str, opt->dest, opt->arrc))) {
       return false;
     }
 
   } else if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
     *(((bool *)opt->dest) + opt->arrc) = !(opt->mods & STARK_OPT_MOD_SET_FALSE);
-
     val_ptr = ((bool *)opt->dest) + opt->arrc;
   } else if (opt->type == STARK_OPT_TYPE_STRING) {
     *(((char const **)opt->dest) + opt->arrc) = str;
@@ -132,11 +132,11 @@ assign_opt_skip_arg:
       val.d = strtod(str, &endptr);
     }
 
-    if (endptr == str) {
+    if (STARK_EXPECT_FALSE(endptr == str)) {
       fprintf(stderr, "not a number: '%s'\n", str);
 
       return false;
-    } else if (errno == ERANGE) {
+    } else if (STARK_EXPECT_FALSE(errno == ERANGE)) {
       fprintf(stderr, "out of range: '%s'\n", str);
 
       return false;
@@ -147,7 +147,7 @@ assign_opt_skip_arg:
     // normally (ptr + 0).
     switch (opt->type) {
     case STARK_OPT_TYPE_INTEGER:
-      if (val.l > INT_MAX || val.l < INT_MIN) {
+      if (STARK_EXPECT_FALSE(val.l > INT_MAX || val.l < INT_MIN)) {
         fprintf(stderr, "integer out of range: '%s'\n", str);
 
         return false;
@@ -176,7 +176,7 @@ assign_opt_skip_arg:
   }
 
   if (val_ptr != NULL && opt->handler.validate != NULL &&
-      !opt->handler.validate(val_ptr, opt->ctx)) {
+      STARK_EXPECT_FALSE(!opt->handler.validate(val_ptr, opt->ctx))) {
     return false;
   }
 
@@ -226,14 +226,14 @@ match_longhand(struct stark_opts *const restrict opts) {
       return STARK_OPT_UNKNOWN;
     }
 
-    if ((o->longhand != NULL && (STARK_EXPECT_TRUE(o->_long_len == t_len)) &&
+    if (STARK_EXPECT_TRUE((o->longhand != NULL && (STARK_EXPECT_TRUE(o->_long_len == t_len)) &&
          STARK_EXPECT_TRUE(memcmp(o->longhand, token, t_len) == 0)) ||
         (o->alias != NULL && STARK_EXPECT_TRUE(o->_alias_len == t_len) &&
-         STARK_EXPECT_TRUE(memcmp(o->alias, token, t_len) == 0))) {
+         STARK_EXPECT_TRUE(memcmp(o->alias, token, t_len) == 0)))) {
       break;
     }
 
-    if (++probes == STARK_OPTS_LH_LUT_SIZE) {
+    if (STARK_EXPECT_FALSE(++probes == STARK_OPTS_LH_LUT_SIZE)) {
       return STARK_OPT_UNKNOWN;
     }
 
@@ -242,7 +242,7 @@ match_longhand(struct stark_opts *const restrict opts) {
 
   opts->_token = eq != NULL ? eq + 1 : NULL;
 
-  return assign_opt(opts, o) ? 0 : STARK_OPT_ASSIGN_FAILED;
+  return STARK_EXPECT_TRUE(assign_opt(opts, o)) ? 0 : STARK_OPT_ASSIGN_FAILED;
 }
 
 STARK_ALWAYS_INLINE STARK_FLATTEN static inline int
@@ -259,7 +259,7 @@ match_shorthand(struct stark_opts *const restrict opts) {
 
     opts->_token = opts->_token[1] != '\0' ? &opts->_token[1] : NULL;
 
-    if (!assign_opt(opts, o)) {
+    if (STARK_EXPECT_FALSE(!assign_opt(opts, o))) {
       return STARK_OPT_ASSIGN_FAILED;
     }
 
@@ -489,7 +489,7 @@ STARK_COLD bool stark_opts_init(struct stark_opts *const restrict opts) {
 
 bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
                       char const **const restrict argv) {
-  if (!opts->_verified) {
+  if (STARK_EXPECT_FALSE(!opts->_verified)) {
     STARK_TRAP();
   }
 
@@ -506,7 +506,6 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
     o->mods &= ~STARK_OPT_FOUND;
     o->arrc = 0;
   }
-
   for (; opts->_argc > 0; opts->_argc--, opts->_argv++) {
     char const *arg = *opts->_argv;
 
@@ -519,7 +518,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
     // The reason greedy_pos is here is to skip flag checking for array
     // positionals or "greedy" ones
     if (nop || array_pos || arg[0] != '-' || arg[1] == '\0') {
-      if (opts->_posc == 0 || pos_idx >= opts->_posc) {
+      if (STARK_EXPECT_FALSE(opts->_posc == 0 || pos_idx >= opts->_posc)) {
         goto stark_opts_parse_unknown_option;
       }
 
@@ -528,13 +527,13 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
       if (nop == false && o->type == STARK_OPT_TYPE_SUBCOMMAND) {
         size_t arg_len = strlen(arg);
 
-        if (!(o->_long_len == arg_len &&
-              STARK_EXPECT_TRUE(memcmp(arg, o->usage, o->_long_len) == 0))) {
+        if (STARK_EXPECT_FALSE(!(o->_long_len == arg_len &&
+              STARK_EXPECT_TRUE(memcmp(arg, o->usage, o->_long_len) == 0)))) {
           goto stark_opts_parse_unknown_option;
         }
       }
 
-      if (assign_opt(opts, o)) {
+      if (STARK_EXPECT_TRUE(assign_opt(opts, o))) {
         // The reason this branch is here rather than just in the above if
         // statement is because otherwise a failed assignment wouldn't fall
         // through to the else block
@@ -555,7 +554,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
     if (arg[1] != '-') {
       opts->_token = arg + 1;
 
-      switch (match_shorthand(opts)) {
+      switch (STARK_EXPECT_TRUE(match_shorthand(opts))) {
       case 0:
         break;
       case STARK_OPT_ASSIGN_FAILED:
@@ -575,7 +574,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
 
     opts->_token = arg + 2;
 
-    switch (match_longhand(opts)) {
+    switch (STARK_EXPECT_TRUE(match_longhand(opts))) {
     case 0:
       break;
     case STARK_OPT_ASSIGN_FAILED:
@@ -594,7 +593,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
   for (int i = 0; i < opts->optc; i++) {
     struct stark_opt *const o = &opts->optv[i];
 
-    if (o->mods & STARK_OPT_MOD_REQUIRED && !(o->mods & STARK_OPT_FOUND)) {
+    if (o->mods & STARK_OPT_MOD_REQUIRED && STARK_EXPECT_FALSE(!(o->mods & STARK_OPT_FOUND))) {
       return false; // required not found
     }
   }

@@ -15,6 +15,9 @@ target_link_libraries(positional PRIVATE test)
 add_executable(benchmark_shorthand benchmark_shorthand.c)
 target_link_libraries(benchmark_shorthand PRIVATE test)
 
+add_executable(benchmark_shorthand_same benchmark_shorthand_same.c)
+target_link_libraries(benchmark_shorthand_same PRIVATE test)
+
 add_executable(benchmark_longhand benchmark_longhand.c)
 target_link_libraries(benchmark_longhand PRIVATE test)
 

@@ -14,12 +14,12 @@ int main(void) {
                                "--p=3",
                                "--a=4",
                                "--s=5",
-                               "-d0.0",
-                               "-f1.0",
-                               "-g2.0",
-                               "--h=3.0",
-                               "--j=4.0",
-                               "--k=5.0",
+                               "-d", "0.0",
+                               "-f", "1.0",
+                               "-g", "2.0",
+                               "--h", "3.0",
+                               "--j", "4.0",
+                               "--k", "5.0",
                                "-lstr0",
                                "-zstr1",
                                "-xstr2",
@@ -27,7 +27,7 @@ int main(void) {
                                "--v=str4",
                                "--b=str5"};
 
-  int const argc = sizeof(argv) / sizeof(argv[0]);
+  static int const argc = sizeof(argv) / sizeof(argv[0]);
   struct stark_opts opts = {
       .desc = "benchmark-shorthand test", .optc = optc, .optv = optv};
 
