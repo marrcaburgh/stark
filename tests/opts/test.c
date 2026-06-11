@@ -1,3 +1,4 @@
+#define STARK_OPTS_IMPL
 #include "test.h"
 
 #include <stdio.h>

@@ -1,10 +1,8 @@
 #define _GNU_SOURCE
 #include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-static char const *const restrict argv[] = {
+static char *const argv[] = {
     "benchmark_getopt",
     "-q", "-w", "-e",
     "--r", "--t", "--y",

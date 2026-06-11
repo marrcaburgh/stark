@@ -1,5 +1,5 @@
-#ifndef BENCHMARK_H
-#define BENCHMARK_H
+#ifndef TEST_H
+#define TEST_H
 
 #include <stdbool.h>
 
@@ -23,4 +23,4 @@ void print_shorthand(void);
 void print_longhand(void);
 void print_positional(void);
 
-#endif // BENCHMARK_H
+#endif // TEST_H

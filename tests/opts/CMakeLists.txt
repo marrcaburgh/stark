@@ -1,5 +1,5 @@
 add_library(test test.c)
-target_link_libraries(test PUBLIC stark_opts)
+target_include_directories(test PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 add_executable(cli cli.c)
 target_link_libraries(cli PRIVATE test)
@@ -26,3 +26,8 @@ target_link_libraries(benchmark_longhand_equals PRIVATE test)
 
 add_executable(benchmark_mixed benchmark_mixed.c)
 target_link_libraries(benchmark_mixed PRIVATE test)
+
+add_executable(benchmark_positional benchmark_positional.c)
+target_link_libraries(benchmark_positional PRIVATE test)
+
+add_executable(benchmark_getopt benchmark_getopt.c)
