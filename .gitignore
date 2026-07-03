@@ -57,3 +57,4 @@ dkms.conf
 # other
 build
 compile_commands.json
+perf.data*

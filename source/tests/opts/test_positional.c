@@ -4,8 +4,8 @@
 
 int main(void) {
   // clang-format off
-  char const *argv[] = {
-      "positional",
+  char *argv[] = {
+      "test-positional",
       "--subcommand",
       "3243232",
       "3.3",
@@ -24,11 +24,15 @@ int main(void) {
     return 2;
   }
 
-  if (!stark_opts_parse(&opts, ARRAY_LENGTH(argv), argv)) {
+  if (!stark_opts_parse(&opts, sizeof(argv) / sizeof(argv[0]), argv)) {
     return 3;
   }
 
   print_positional();
+#ifdef STARK_OPTS_ENABLE_HEAP
+  stark_opts_free_token_pool(&opts);
+  stark_opts_free_group_pools(&opts);
+#endif
 
   return 0;
 }

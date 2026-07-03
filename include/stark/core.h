@@ -258,7 +258,6 @@ extern "C" {
 
 #else
 
-// Fallbacks for unsupported compilers
 #define STARK_HOT
 #define STARK_COLD
 #define STARK_FLATTEN
