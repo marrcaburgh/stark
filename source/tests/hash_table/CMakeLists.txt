@@ -1,0 +1,6 @@
+add_executable(test_hash_table test.c)
+target_include_directories(test_hash_table PRIVATE ${PROJECT_SOURCE_DIR}/include)
+
+add_executable(test_hash_table_heap test.c)
+target_include_directories(test_hash_table_heap PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_compile_definitions(test_hash_table_heap PRIVATE STARK_HASH_TABLE_ENABLE_HEAP)

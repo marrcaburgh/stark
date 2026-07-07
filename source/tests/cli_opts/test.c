@@ -1,4 +1,4 @@
-#define STARK_OPTS_IMPL
+#define STARK_CLI_OPTS_IMPL
 #include "test.h"
 
 #include <stdio.h>
@@ -127,5 +127,5 @@ struct stark_opt optv[] = {
 
 int const optc = sizeof(optv) / sizeof(optv[0]);
 
-struct stark_opts subcommand = {
+struct stark_cli_opts subcommand = {
     .desc = "subcommand", .optc = optc, .optv = optv};

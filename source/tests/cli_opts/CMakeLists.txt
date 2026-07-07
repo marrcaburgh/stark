@@ -4,7 +4,7 @@ target_compile_definitions(test PUBLIC)
 
 add_library(test_env test.c)
 target_include_directories(test_env PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_compile_definitions(test_env PUBLIC STARK_OPTS_ENABLE_HEAP STARK_OPTS_ENABLE_ENV STARK_OPTS_ENV_LUT_SIZE=32)
+target_compile_definitions(test_env PUBLIC STARK_CLI_OPTS_ENABLE_HEAP STARK_CLI_OPTS_ENABLE_ENV STARK_CLI_OPTS_ENV_LUT_SIZE=32)
 
 add_executable(test_cli test_cli.c)
 target_link_libraries(test_cli PRIVATE test)

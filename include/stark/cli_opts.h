@@ -1,5 +1,5 @@
 //
-// stark - a C99+ utility library - stark_opts - a blazing-fast feature-full
+// stark - a C99+ utility library - stark_cli_opts - a blazing-fast feature-full
 // command-line parser
 // Copyright (C) 2026 marrcaburgh
 //
@@ -18,8 +18,8 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 //
 
-#ifndef STARK__OPTS_H
-#define STARK__OPTS_H
+#ifndef STARK_CLI_OPTS_H
+#define STARK_CLI_OPTS_H
 
 #include "stark/core.h"
 
@@ -35,51 +35,51 @@ extern "C" {
 // Uncomment these to get syntax highlighting of the code in this header, the
 // default (stack) parts will still be grayed out:
 //
-// #define STARK_OPTS_ENABLE_ENV
-// #define STARK_OPTS_ENABLE_HEAP
-// #define STARK_OPTS_IMPL
+// #define STARK_CLI_OPTS_ENABLE_ENV
+// #define STARK_CLI_OPTS_ENABLE_HEAP
+// #define STARK_CLI_OPTS_IMPL
 //
 //
 // Define these macros before including this header or with your build system:
 //
-// Define STARK_OPTS_LH_LUT_SIZE, STARK_OPTS_POS_LUT_SIZE,
-// STARK_OPTS_PSC_LUT_SIZE, and/or STARK_OPTS_ENV_LUT_SIZE to change the size of
-// each corresponding lookup table. Each LUT except for POS (positional) must be
-// a power of two. The default sizes are listed below.
+// Define STARK_CLI_OPTS_LH_LUT_SIZE, STARK_CLI_OPTS_POS_LUT_SIZE,
+// STARK_CLI_OPTS_PSC_LUT_SIZE, and/or STARK_CLI_OPTS_ENV_LUT_SIZE to change the
+// size of each corresponding lookup table. Each LUT except for POS (positional)
+// must be a power of two. The default sizes are listed below.
 //
-// Define STARK_OPTS_ENABLE_ENV to enable environment variable parsing if you're
-// on an operating system that defines `environ` or `_environ` as part of the C
-// standard library. See below.
+// Define STARK_CLI_OPTS_ENABLE_ENV to enable environment variable parsing if
+// you're on an operating system that defines `environ` or `_environ` as part of
+// the C standard library. See below.
 //
-// Define STARK_OPTS_ENABLE_HEAP to enable heap allocation for a worst-case
+// Define STARK_CLI_OPTS_ENABLE_HEAP to enable heap allocation for a worst-case
 // sized token pool that is used to tokenize argv and slice delimited string
 // arrays, and the environment if environment variable parsing is enabled.
 //
 // Delimited string arrays can be used with heap allocation disabled, but
 // argv point to mutable strings otherwise this is undefined behavior.
 //
-#ifndef STARK_OPTS_LH_LUT_SIZE
-#define STARK_OPTS_LH_LUT_SIZE 64
-#endif // STARK_OPTS_LH_LUT_SIZE
-#ifndef STARK_OPTS_POS_LUT_SIZE
-#define STARK_OPTS_POS_LUT_SIZE 4
-#endif // STARK_OPTS_POS_LUT_SIZE
-#ifndef STARK_OPTS_PSC_LUT_SIZE
-#define STARK_OPTS_PSC_LUT_SIZE 8
-#endif // STARK_OPTS_PSC_LUT_SIZE
-#ifndef STARK_OPTS_ENV_LUT_SIZE
-#define STARK_OPTS_ENV_LUT_SIZE 16
-#endif // STARK_OPTS_ENV_LUT_SIZE
+#ifndef STARK_CLI_OPTS_LH_LUT_SIZE
+#define STARK_CLI_OPTS_LH_LUT_SIZE 64
+#endif // STARK_CLI_OPTS_LH_LUT_SIZE
+#ifndef STARK_CLI_OPTS_POS_LUT_SIZE
+#define STARK_CLI_OPTS_POS_LUT_SIZE 4
+#endif // STARK_CLI_OPTS_POS_LUT_SIZE
+#ifndef STARK_CLI_OPTS_PSC_LUT_SIZE
+#define STARK_CLI_OPTS_PSC_LUT_SIZE 8
+#endif // STARK_CLI_OPTS_PSC_LUT_SIZE
+#ifndef STARK_CLI_OPTS_ENV_LUT_SIZE
+#define STARK_CLI_OPTS_ENV_LUT_SIZE 16
+#endif // STARK_CLI_OPTS_ENV_LUT_SIZE
 
-typedef enum stark_opts_err {
-  STARK_OPTS_ERR_UNKNOWN_OPTION = 1,
-  STARK_OPTS_ERR_NO_VALUE = 2,
-  STARK_OPTS_ERR_OOB = 3,
-  STARK_OPTS_ERR_NAN = 4,
-  STARK_OPTS_ERR_OOR = 5,
-  STARK_OPTS_ERR_MISSING_REQUIRED_OPTION = 6,
-  STARK_OPTS_ERR_CONFLICTING_OPTION = 7,
-} stark_opts_err_t;
+typedef enum stark_cli_opts_err {
+  STARK_CLI_OPTS_ERR_UNKNOWN_OPTION = 1,
+  STARK_CLI_OPTS_ERR_NO_VALUE = 2,
+  STARK_CLI_OPTS_ERR_OOB = 3,
+  STARK_CLI_OPTS_ERR_NAN = 4,
+  STARK_CLI_OPTS_ERR_OOR = 5,
+  STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPTION = 6,
+  STARK_CLI_OPTS_ERR_CONFLICTING_OPTION = 7,
+} stark_cli_opts_err_t;
 
 enum {
   /* regular types */
@@ -137,29 +137,34 @@ typedef struct stark_opt {
   char const *const restrict usage; // 8 bytes
 } stark_opt_t; // Fits into one 64-bit L1 cache line or 64 bytes of memory.
 
-typedef struct stark_opts {
-  struct stark_opt *_sh_lut[256], *_lh_lut[STARK_OPTS_LH_LUT_SIZE],
-      *_psc_lut[STARK_OPTS_PSC_LUT_SIZE], *_env_lut[STARK_OPTS_ENV_LUT_SIZE],
-      *_pos_lut[STARK_OPTS_POS_LUT_SIZE], **_group_table[63];
+typedef struct stark_cli_opts {
+  struct stark_opt *_sh_lut[256], *_lh_lut[STARK_CLI_OPTS_LH_LUT_SIZE],
+      *_psc_lut[STARK_CLI_OPTS_PSC_LUT_SIZE],
+      *_env_lut[STARK_CLI_OPTS_ENV_LUT_SIZE],
+      *_pos_lut[STARK_CLI_OPTS_POS_LUT_SIZE], **_group_table[63];
   struct stark_opt *const optv;
   char const *const restrict desc;
-  void (*const err_callback)(enum stark_opts_err const errc, char const *ctx);
+  void (*const err_callback)(enum stark_cli_opts_err const errc,
+                             char const *ctx);
   char *_token_pool, *_token, **_argv;
   int _argc;
   int const optc;
   uint8_t _flags;
   uint8_t _posc;
-} stark_opts_t;
+} stark_cli_opts_t;
 
-STARK_COLD bool stark_opts_init(struct stark_opts *const restrict opts);
-bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
-                      char **argv);
-#ifdef STARK_OPTS_ENABLE_HEAP
-void stark_opts_free_token_pool(struct stark_opts *const restrict opts);
-void stark_opts_free_group_pools(struct stark_opts *const restrict opts);
+STARK_COLD bool
+stark_cli_opts_init(struct stark_cli_opts *const restrict cli_opts);
+bool stark_cli_opts_parse(struct stark_cli_opts *const restrict cli_opts,
+                          int const argc, char **argv);
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+void stark_cli_opts_free_token_pool(
+    struct stark_cli_opts *const restrict cli_opts);
+void stark_cli_opts_free_group_pools(
+    struct stark_cli_opts *const restrict cli_opts);
 #endif
 
-#ifdef STARK_OPTS_IMPL
+#ifdef STARK_CLI_OPTS_IMPL
 
 #define LUT_TYPE_LH 0
 #define LUT_TYPE_PSC 1
@@ -190,52 +195,52 @@ enum {
   POSITIONAL,
 };
 
-STARK_COLD static void error(struct stark_opts *const restrict opts,
-                             enum stark_opts_err const errc,
+STARK_COLD static void error(struct stark_cli_opts *const restrict cli_opts,
+                             enum stark_cli_opts_err const errc,
                              char const *const fname_octx,
                              char const *const err_ofmt, ...) {
-  if (opts != NULL) {
-    if (opts->err_callback != NULL) {
-      opts->err_callback(errc, err_ofmt);
+  if (cli_opts != NULL) {
+    if (cli_opts->err_callback != NULL) {
+      cli_opts->err_callback(errc, err_ofmt);
 
       return;
     }
 
     switch (errc) {
-    case STARK_OPTS_ERR_UNKNOWN_OPTION:
+    case STARK_CLI_OPTS_ERR_UNKNOWN_OPTION:
       fprintf(stderr, "unknown option: '%s%s'",
-              opts->_flags & POS_OPT    ? ""
-              : opts->_flags & LONG_OPT ? "--"
-                                        : "-",
+              cli_opts->_flags & POS_OPT    ? ""
+              : cli_opts->_flags & LONG_OPT ? "--"
+                                            : "-",
               err_ofmt);
 
       break;
-    case STARK_OPTS_ERR_NO_VALUE:
+    case STARK_CLI_OPTS_ERR_NO_VALUE:
       fprintf(stderr, "no value for option (expected: %s): '%s%s'", fname_octx,
-              opts->_flags & POS_OPT    ? ""
-              : opts->_flags & LONG_OPT ? "--"
-                                        : "-",
+              cli_opts->_flags & POS_OPT    ? ""
+              : cli_opts->_flags & LONG_OPT ? "--"
+                                            : "-",
               err_ofmt);
 
       break;
-    case STARK_OPTS_ERR_OOB:
+    case STARK_CLI_OPTS_ERR_OOB:
       fprintf(stderr, "out of bounds: '%s'", err_ofmt);
 
       break;
-    case STARK_OPTS_ERR_NAN:
+    case STARK_CLI_OPTS_ERR_NAN:
       fprintf(stderr, "not a number: '%s'", err_ofmt);
 
       break;
-    case STARK_OPTS_ERR_OOR:
+    case STARK_CLI_OPTS_ERR_OOR:
       fprintf(stderr, "out of range (expected: %s): '%s'", fname_octx,
               err_ofmt);
 
       break;
-    case STARK_OPTS_ERR_MISSING_REQUIRED_OPTION:
+    case STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPTION:
       fprintf(stderr, "missing required option: '%s'", err_ofmt);
 
       break;
-    case STARK_OPTS_ERR_CONFLICTING_OPTION:
+    case STARK_CLI_OPTS_ERR_CONFLICTING_OPTION:
       fprintf(stderr, "conflicting option %s", err_ofmt);
 
       break;
@@ -243,7 +248,7 @@ STARK_COLD static void error(struct stark_opts *const restrict opts,
       return;
     }
   } else {
-    fprintf(stderr, "stark_opts error: %s(): ", fname_octx);
+    fprintf(stderr, "stark_cli_opts error: %s(): ", fname_octx);
 
     va_list ap;
 
@@ -256,20 +261,20 @@ STARK_COLD static void error(struct stark_opts *const restrict opts,
 }
 
 STARK_NOINLINE static bool
-run_subcommand(struct stark_opts *const restrict opts,
+run_subcommand(struct stark_cli_opts *const restrict cli_opts,
                struct stark_opt *const restrict opt) {
-  return stark_opts_parse((struct stark_opts *)opt->ctx, opts->_argc,
-                          opts->_argv);
+  return stark_cli_opts_parse((struct stark_cli_opts *)opt->ctx,
+                              cli_opts->_argc, cli_opts->_argv);
 }
 
 STARK_COLD STARK_ALWAYS_INLINE static inline void
-help(STARK_UNUSED struct stark_opts *const restrict opts) {
+help(STARK_UNUSED struct stark_cli_opts *const restrict cli_opts) {
   // TODO: implement help generator with declarative configuration for
   // formatting
 }
 
 STARK_ALWAYS_INLINE static inline bool
-assign_opt(struct stark_opts *const restrict opts,
+assign_opt(struct stark_cli_opts *const restrict cli_opts,
            struct stark_opt *const restrict opt) {
   if (opt->callback.callback != NULL && opt->cb_tag == 0) {
     opt->callback.callback(opt->ctx);
@@ -277,15 +282,15 @@ assign_opt(struct stark_opts *const restrict opts,
     return true;
   } else if (opt->assign == NULL) {
     if (opt->type == STARK_OPT_TYPE_HELP) {
-      help(opts);
+      help(cli_opts);
 
       return true;
     } else if (opt->type == STARK_OPT_TYPE_SUBCOMMAND) {
-      if (STARK_EXPECT_FALSE(!run_subcommand(opts, opt))) {
+      if (STARK_EXPECT_FALSE(!run_subcommand(cli_opts, opt))) {
         return false;
       }
 
-      opts->_argc = 0;
+      cli_opts->_argc = 0;
 
       return true;
     }
@@ -297,7 +302,7 @@ assign_opt(struct stark_opts *const restrict opts,
 assign_opt_carr:
   if (STARK_EXPECT_FALSE(opt->mods & STARK_OPT_MOD_ARRAY &&
                          opt->arrc > opt->arrl)) {
-    error(opts, STARK_OPTS_ERR_OOB, NULL, opts->_token);
+    error(cli_opts, STARK_CLI_OPTS_ERR_OOB, NULL, cli_opts->_token);
 
     return false;
   }
@@ -308,26 +313,26 @@ assign_opt_carr:
     goto assign_opt_skip_val;
   } else if (opt->mods & STARK_OPT_MOD_POSITIONAL) {
     goto assign_opt_skip_vfind_os;
-  } else if (opts->_flags & VALUE_TOKEN) {
-    opts->_flags &= ~VALUE_TOKEN;
+  } else if (cli_opts->_flags & VALUE_TOKEN) {
+    cli_opts->_flags &= ~VALUE_TOKEN;
 
     goto assign_opt_skip_vfind_os;
-  } else if (opts->_argc > 1) {
+  } else if (cli_opts->_argc > 1) {
   assign_opt_retry_narg:
-    opts->_argc--;
-    opts->_argv++;
+    cli_opts->_argc--;
+    cli_opts->_argv++;
 
-    if (STARK_EXPECT_FALSE(opts->_argc == 0)) {
+    if (STARK_EXPECT_FALSE(cli_opts->_argc == 0)) {
       return false;
-    } else if (STARK_EXPECT_FALSE(opts->_argv == NULL ||
-                                  *(opts->_argv)[0] == '\0')) {
+    } else if (STARK_EXPECT_FALSE(cli_opts->_argv == NULL ||
+                                  *(cli_opts->_argv)[0] == '\0')) {
       goto assign_opt_retry_narg;
     } else {
-#ifdef STARK_OPTS_ENABLE_HEAP
-      strcpy(opts->_token, *opts->_argv);
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+      strcpy(cli_opts->_token, *cli_opts->_argv);
 #else
-      opts->_token = *opts->_argv;
-#endif // STARK_OPTS_ENABLE_HEAP
+      cli_opts->_token = *cli_opts->_argv;
+#endif // STARK_CLI_OPTS_ENABLE_HEAP
 
       goto assign_opt_skip_vfind_os;
     }
@@ -359,12 +364,12 @@ assign_opt_carr:
     break;
   }
 
-  error(opts, STARK_OPTS_ERR_NO_VALUE, ot, opts->_token);
+  error(cli_opts, STARK_CLI_OPTS_ERR_NO_VALUE, ot, cli_opts->_token);
 
   return false;
 
 assign_opt_skip_vfind_os:
-  str = opts->_token;
+  str = cli_opts->_token;
 
   if (opt->assign != NULL) {
     if (STARK_EXPECT_FALSE(!opt->assign(str, opt->dest, opt->arrc, &vp))) {
@@ -401,8 +406,8 @@ assign_opt_skip_vfind_os:
     ((char const **)opt->dest)[opt->arrc] = str;
     vp = &((char const **)opt->dest)[opt->arrc];
 
-#ifdef STARK_OPTS_ENABLE_HEAP
-    opts->_token = strchr(str, '\0') + 1;
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+    cli_opts->_token = strchr(str, '\0') + 1;
 #endif
 
     goto assign_opt_skip_bltn_os;
@@ -419,10 +424,10 @@ assign_opt_skip_vfind_os:
 
   if ((opt->type >= STARK_OPT_TYPE_INT64) &&
       (opt->type <= STARK_OPT_TYPE_INT8)) {
-    val.i = strtoll(str, &endptr, 10);
+    val.i = strtoll(str, &endptr, 0);
   } else if ((opt->type >= STARK_OPT_TYPE_UINT64) &&
              (opt->type <= STARK_OPT_TYPE_UINT8)) {
-    val.ui = strtoull(str, &endptr, 10);
+    val.ui = strtoull(str, &endptr, 0);
   } else if (opt->type == STARK_OPT_TYPE_FLOAT64) {
     val.d = strtod(str, &endptr);
   } else if (opt->type == STARK_OPT_TYPE_FLOAT32) {
@@ -430,10 +435,10 @@ assign_opt_skip_vfind_os:
   }
 
   if ((opt->mods & STARK_OPT_MOD_ARRAY) && *endptr == opt->delim) {
-    opts->_token = (delim = endptr) + 1;
-    opts->_flags |= VALUE_TOKEN;
+    cli_opts->_token = (delim = endptr) + 1;
+    cli_opts->_flags |= VALUE_TOKEN;
   } else if (STARK_EXPECT_FALSE(endptr == str) || *endptr != '\0') {
-    error(opts, STARK_OPTS_ERR_NAN, NULL, str);
+    error(cli_opts, STARK_CLI_OPTS_ERR_NAN, NULL, str);
 
     return false;
   }
@@ -557,7 +562,7 @@ assign_opt_skip_vfind_os:
     goto assign_opt_skip_bltn_os;
   }
 
-  error(opts, STARK_OPTS_ERR_OOR, rs, str);
+  error(cli_opts, STARK_CLI_OPTS_ERR_OOR, rs, str);
 
   return false;
 
@@ -576,8 +581,8 @@ assign_opt_skip_val:
         *delim = '\0';
       }
 
-      opts->_token = delim + 1;
-      opts->_flags |= VALUE_TOKEN;
+      cli_opts->_token = delim + 1;
+      cli_opts->_flags |= VALUE_TOKEN;
       delim = NULL;
 
       goto assign_opt_carr;
@@ -609,19 +614,19 @@ lut_insert(struct stark_opt *const restrict opt, struct stark_opt **lut,
   switch (type) {
   case 0:
     ot = "longhand";
-    ls = "STARK_OPTS_LH_LUT_SIZE";
+    ls = "STARK_CLI_OPTS_LH_LUT_SIZE";
     os = opt->longhand;
     lp = &opt->_long_len;
     break;
   case 1:
     ot = "positional subcommand";
-    ls = "STARK_OPTS_PSC_LUT_SIZE";
+    ls = "STARK_CLI_OPTS_PSC_LUT_SIZE";
     os = opt->longhand;
     lp = &opt->_long_len;
     break;
   case 2:
     ot = "environment";
-    ls = "STARK_OPTS_ENV_LUT_SIZE";
+    ls = "STARK_CLI_OPTS_ENV_LUT_SIZE";
     os = opt->env;
     lp = &opt->_env_len;
     break;
@@ -672,86 +677,91 @@ lut_insert(struct stark_opt *const restrict opt, struct stark_opt **lut,
   return true;
 }
 
-STARK_COLD bool stark_opts_init(struct stark_opts *const restrict opts) {
+STARK_COLD bool
+stark_cli_opts_init(struct stark_cli_opts *const restrict cli_opts) {
   bool ok = true, vp = false;
 
-  if (opts == NULL) {
-    error(NULL, 0, "stark_opts_init", "opts cannot be NULL");
+  if (cli_opts == NULL) {
+    error(NULL, 0, "stark_cli_opts_init", "cli_opts cannot be NULL");
 
     return false;
-  } else if (opts->optv == NULL) {
-    error(NULL, 0, "stark_opts_init", "optv cannot be NULL");
+  } else if (cli_opts->optv == NULL) {
+    error(NULL, 0, "stark_cli_opts_init", "optv cannot be NULL");
 
     return false;
-  } else if (opts->optc <= 0) {
-    error(NULL, 0, "stark_opts_init", "optc must be greater than zero");
+  } else if (cli_opts->optc <= 0) {
+    error(NULL, 0, "stark_cli_opts_init", "optc must be greater than zero");
 
     return false;
-  } else if (opts->_flags & VERIFIED) {
+  } else if (cli_opts->_flags & VERIFIED) {
     return true;
   }
 
-  if ((STARK_OPTS_LH_LUT_SIZE == 0) ||
-      (!((STARK_OPTS_LH_LUT_SIZE & (STARK_OPTS_LH_LUT_SIZE - 1)) == 0))) {
-    error(NULL, 0, "stark_opts_init",
-          "STARK_OPTS_LH_LUT_SIZE must be a power of two");
+  if ((STARK_CLI_OPTS_LH_LUT_SIZE == 0) ||
+      (!((STARK_CLI_OPTS_LH_LUT_SIZE & (STARK_CLI_OPTS_LH_LUT_SIZE - 1)) ==
+         0))) {
+    error(NULL, 0, "stark_cli_opts_init",
+          "STARK_CLI_OPTS_LH_LUT_SIZE must be a power of two");
 
     return false;
   }
 
-  if ((STARK_OPTS_PSC_LUT_SIZE == 0) ||
-      (!((STARK_OPTS_PSC_LUT_SIZE & (STARK_OPTS_PSC_LUT_SIZE - 1)) == 0))) {
-    error(NULL, 0, "stark_opts_init",
-          "STARK_OPTS_PSC_LUT_SIZE must be a power of two");
+  if ((STARK_CLI_OPTS_PSC_LUT_SIZE == 0) ||
+      (!((STARK_CLI_OPTS_PSC_LUT_SIZE & (STARK_CLI_OPTS_PSC_LUT_SIZE - 1)) ==
+         0))) {
+    error(NULL, 0, "stark_cli_opts_init",
+          "STARK_CLI_OPTS_PSC_LUT_SIZE must be a power of two");
 
     return false;
   }
 
-#ifdef STARK_OPTS_ENABLE_ENV
-  if ((STARK_OPTS_ENV_LUT_SIZE == 0) ||
-      (!((STARK_OPTS_ENV_LUT_SIZE & (STARK_OPTS_ENV_LUT_SIZE - 1)) == 0))) {
-    error(NULL, 0, "stark_opts_init",
-          "STARK_OPTS_ENV_LUT_SIZE must be a power of two");
+#ifdef STARK_CLI_OPTS_ENABLE_ENV
+  if ((STARK_CLI_OPTS_ENV_LUT_SIZE == 0) ||
+      (!((STARK_CLI_OPTS_ENV_LUT_SIZE & (STARK_CLI_OPTS_ENV_LUT_SIZE - 1)) ==
+         0))) {
+    error(NULL, 0, "stark_cli_opts_init",
+          "STARK_CLI_OPTS_ENV_LUT_SIZE must be a power of two");
 
     return false;
   }
 #endif
 
   int li = 0;
-stark_opts_init_loop:
-  if (li == opts->optc) {
-    goto stark_opts_init_loope;
+stark_cli_opts_init_loop:
+  if (li == cli_opts->optc) {
+    goto stark_cli_opts_init_loope;
   }
 
-  stark_opt_t *const restrict op = &opts->optv[li];
+  stark_opt_t *const restrict op = &cli_opts->optv[li];
 
-#ifdef STARK_OPTS_ENABLE_HEAP
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
   if (op->group != 0) {
     size_t c = 1;
 
-    c += opts->_group_table[op->group - 1] != NULL
-             ? *((size_t *)opts->_group_table[op->group - 1])
+    c += cli_opts->_group_table[op->group - 1] != NULL
+             ? *((size_t *)cli_opts->_group_table[op->group - 1])
              : 1;
 
     struct stark_opt **tp =
-        realloc(opts->_group_table[op->group - 1],
+        realloc(cli_opts->_group_table[op->group - 1],
                 sizeof(size_t) + c * sizeof(struct stark_opt **));
 
     if (tp == NULL) {
-      error(NULL, 0, "stark_opts_init", "reallocation for group pool failed");
+      error(NULL, 0, "stark_cli_opts_init",
+            "reallocation for group pool failed");
 
       return false;
     }
 
-    *((size_t *)(opts->_group_table[op->group - 1] = tp)) = c;
-    opts->_group_table[op->group - 1][c - 1] = op;
-    opts->_group_table[op->group - 1][c] = NULL;
+    *((size_t *)(cli_opts->_group_table[op->group - 1] = tp)) = c;
+    cli_opts->_group_table[op->group - 1][c - 1] = op;
+    cli_opts->_group_table[op->group - 1][c] = NULL;
   }
 #endif
 
   if (op->mods & STARK_OPT_MOD_ARRAY) {
     if (op->arrl <= 1) {
-      error(NULL, 0, "stark_opts_init",
+      error(NULL, 0, "stark_cli_opts_init",
             "array options must have an arrl that is greater than one");
 
       ok = false;
@@ -762,7 +772,7 @@ stark_opts_init_loop:
     case ':':
     case ';':
       if (op->type == STARK_OPT_TYPE_BOOLEAN) {
-        error(NULL, 0, "stark_opts_init",
+        error(NULL, 0, "stark_cli_opts_init",
               "boolean options cannot have delimiters");
 
         ok = false;
@@ -770,11 +780,11 @@ stark_opts_init_loop:
       break;
     default:
       if (op->type != STARK_OPT_TYPE_BOOLEAN
-#ifndef STARK_OPTS_ENABLE_HEAP
+#ifndef STARK_CLI_OPTS_ENABLE_HEAP
           && op->type != STARK_OPT_TYPE_STRING
-#endif // STARK_OPTS_ENABLE_HEAP
+#endif // STARK_CLI_OPTS_ENABLE_HEAP
       ) {
-        error(NULL, 0, "stark_opts_init",
+        error(NULL, 0, "stark_cli_opts_init",
               "missing delimiter for array option (expected one of: ',', ':', "
               "';')");
 
@@ -787,14 +797,15 @@ stark_opts_init_loop:
 
   if (op->assign != NULL) {
     if (op->dest == NULL) {
-      error(NULL, 0, "stark_opts_init", "option missing destination pointer");
+      error(NULL, 0, "stark_cli_opts_init",
+            "option missing destination pointer");
 
       ok = false;
     }
 
-    goto stark_opts_init_skip_bltn;
+    goto stark_cli_opts_init_skip_bltn;
   } else if (op->callback.callback != NULL && op->cb_tag == 0) {
-    goto stark_opts_init_skip_bltn;
+    goto stark_cli_opts_init_skip_bltn;
   }
 
   switch (op->type) {
@@ -811,7 +822,8 @@ stark_opts_init_loop:
   case STARK_OPT_TYPE_FLOAT32:
   case STARK_OPT_TYPE_BOOLEAN:
     if (op->dest == NULL) {
-      error(NULL, 0, "stark_opts_init", "option missing destination pointer");
+      error(NULL, 0, "stark_cli_opts_init",
+            "option missing destination pointer");
 
       ok = false;
     }
@@ -819,7 +831,8 @@ stark_opts_init_loop:
     break;
   case STARK_OPT_TYPE_SUBCOMMAND:
     if (op->ctx == NULL) {
-      error(NULL, 0, "stark_opts_init", "subcommand option missing context");
+      error(NULL, 0, "stark_cli_opts_init",
+            "subcommand option missing context");
 
       ok = false;
     }
@@ -829,53 +842,54 @@ stark_opts_init_loop:
     break;
   }
 
-stark_opts_init_skip_bltn:
+stark_cli_opts_init_skip_bltn:
   if (op->mods & STARK_OPT_MOD_POSITIONAL) {
     if (op->type == STARK_OPT_TYPE_SUBCOMMAND) {
       if (op->longhand == NULL) {
-        error(NULL, 0, "stark_opts_init",
+        error(NULL, 0, "stark_cli_opts_init",
               "positional subcommand options must have a longhand");
 
         ok = false;
       } else {
         op->_long_len = strlen(op->longhand);
-        ok &= lut_insert(op, opts->_psc_lut, STARK_OPTS_PSC_LUT_SIZE,
+        ok &= lut_insert(op, cli_opts->_psc_lut, STARK_CLI_OPTS_PSC_LUT_SIZE,
                          LUT_TYPE_PSC);
       }
 
-      goto stark_opts_init_skip_rpos;
+      goto stark_cli_opts_init_skip_rpos;
     } else if (op->type == STARK_OPT_TYPE_BOOLEAN) {
-      error(NULL, 0, "stark_opts_init",
+      error(NULL, 0, "stark_cli_opts_init",
             "positional option modifier cannot be combined with boolean "
             "type");
 
       ok = false;
     }
 
-    if (opts->_posc == STARK_OPTS_POS_LUT_SIZE) {
-      error(NULL, 0, "stark_opts_init",
+    if (cli_opts->_posc == STARK_CLI_OPTS_POS_LUT_SIZE) {
+      error(NULL, 0, "stark_cli_opts_init",
             "positional option count exceeds limit; define "
-            "STARK_OPTS_POS_LUT_SIZE before inclusion with a greater limit or "
+            "STARK_CLI_OPTS_POS_LUT_SIZE before inclusion with a greater limit "
+            "or "
             "remove "
             "options");
 
       ok = false;
     } else {
       if (vp) {
-        error(NULL, 0, "stark_opts_init",
+        error(NULL, 0, "stark_cli_opts_init",
               "variadic positional options must be the last positional");
 
         ok = false;
       }
 
       vp = (op->mods & STARK_OPT_MOD_ARRAY);
-      opts->_pos_lut[opts->_posc++] = op;
+      cli_opts->_pos_lut[cli_opts->_posc++] = op;
     }
 
-  stark_opts_init_skip_rpos:
-    goto stark_opts_init_skip_onc;
+  stark_cli_opts_init_skip_rpos:
+    goto stark_cli_opts_init_skip_onc;
   } else if (op->shorthand == '\0' && op->longhand == NULL) {
-    error(NULL, 0, "stark_opts_init",
+    error(NULL, 0, "stark_cli_opts_init",
           "non-positional options must have either a shorthand "
           "or longhand");
 
@@ -883,43 +897,45 @@ stark_opts_init_skip_bltn:
   }
 
   if (op->shorthand == '\0') {
-    goto stark_opts_init_skip_sh;
+    goto stark_cli_opts_init_skip_sh;
   }
 
-  if (opts->_sh_lut[op->shorthand] == NULL) {
-    opts->_sh_lut[op->shorthand] = op;
+  if (cli_opts->_sh_lut[op->shorthand] == NULL) {
+    cli_opts->_sh_lut[op->shorthand] = op;
   } else {
-    error(NULL, 0, "stark_opts_init", "duplicate shorthand option '%c'",
+    error(NULL, 0, "stark_cli_opts_init", "duplicate shorthand option '%c'",
           op->shorthand);
 
     ok = false;
   }
 
-stark_opts_init_skip_sh:
+stark_cli_opts_init_skip_sh:
   if (op->longhand != NULL) {
-    ok &= lut_insert(op, opts->_lh_lut, STARK_OPTS_LH_LUT_SIZE, LUT_TYPE_LH);
+    ok &= lut_insert(op, cli_opts->_lh_lut, STARK_CLI_OPTS_LH_LUT_SIZE,
+                     LUT_TYPE_LH);
   }
 
-#ifdef STARK_OPTS_ENABLE_ENV
+#ifdef STARK_CLI_OPTS_ENABLE_ENV
   if (op->env != NULL) {
-    ok &= lut_insert(op, opts->_env_lut, STARK_OPTS_ENV_LUT_SIZE, LUT_TYPE_ENV);
+    ok &= lut_insert(op, cli_opts->_env_lut, STARK_CLI_OPTS_ENV_LUT_SIZE,
+                     LUT_TYPE_ENV);
   }
 #endif
 
-stark_opts_init_skip_onc:
+stark_cli_opts_init_skip_onc:
   li++;
 
-  goto stark_opts_init_loop;
+  goto stark_cli_opts_init_loop;
 
-stark_opts_init_loope:
-  return opts->_flags |= (ok ? VERIFIED : 0);
+stark_cli_opts_init_loope:
+  return cli_opts->_flags |= (ok ? VERIFIED : 0);
 }
 
 STARK_ALWAYS_INLINE STARK_FLATTEN static inline struct stark_opt *
-probe(struct stark_opts *const restrict opts,
+probe(struct stark_cli_opts *const restrict cli_opts,
       struct stark_opt *const restrict *lut, size_t const lut_size,
       uint8_t const type) {
-  char *restrict eq = opts->_token;
+  char *restrict eq = cli_opts->_token;
 
   for (; eq[0] != '=' && eq[0] != '\0'; eq++)
     ;
@@ -928,8 +944,8 @@ probe(struct stark_opts *const restrict opts,
     return NULL;
   }
 
-  for (size_t probes = 0, tkn_len = (size_t)(eq - opts->_token),
-              i = hashn(opts->_token, tkn_len) & (lut_size - 1);
+  for (size_t probes = 0, tkn_len = (size_t)(eq - cli_opts->_token),
+              i = hashn(cli_opts->_token, tkn_len) & (lut_size - 1);
        probes != lut_size; i = (i + 1) & (lut_size - 1), probes++) {
     struct stark_opt *op;
 
@@ -941,15 +957,15 @@ probe(struct stark_opts *const restrict opts,
     uint8_t *const lp = type == LUT_TYPE_ENV ? &op->_env_len : &op->_long_len;
 
     if (STARK_EXPECT_TRUE(*lp == tkn_len &&
-                          memcmp(os, opts->_token, tkn_len) == 0)) {
+                          memcmp(os, cli_opts->_token, tkn_len) == 0)) {
       if (type != LUT_TYPE_PSC && eq[0] != '\0') {
         if (eq[1] == '\0') {
           eq[0] = '\0';
         } else {
-          opts->_token = eq + 1;
+          cli_opts->_token = eq + 1;
         }
       } else {
-        opts->_flags &= ~VALUE_TOKEN;
+        cli_opts->_flags &= ~VALUE_TOKEN;
       }
 
       op->_fstate = LONGHAND;
@@ -961,34 +977,34 @@ probe(struct stark_opts *const restrict opts,
   return NULL;
 }
 
-bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
-                      char **argv) {
-  if (STARK_EXPECT_FALSE(opts == NULL)) {
-    error(NULL, 0, "stark_opts_parse", "opts cannot be NULL");
+bool stark_cli_opts_parse(struct stark_cli_opts *const restrict cli_opts,
+                          int const argc, char **argv) {
+  if (STARK_EXPECT_FALSE(cli_opts == NULL)) {
+    error(NULL, 0, "stark_cli_opts_parse", "cli_opts cannot be NULL");
 
     return false;
   } else if (STARK_EXPECT_FALSE(argv == NULL)) {
-    error(NULL, 0, "stark_opts_parse", "argv cannot be NULL");
+    error(NULL, 0, "stark_cli_opts_parse", "argv cannot be NULL");
 
     return false;
   } else if (STARK_EXPECT_FALSE(argc <= 0)) {
-    error(NULL, 0, "stark_opts_parse", "argc must be greater than zero");
+    error(NULL, 0, "stark_cli_opts_parse", "argc must be greater than zero");
 
     return false;
-  } else if (STARK_EXPECT_FALSE(!(opts->_flags & VERIFIED))) {
-    error(NULL, 0, "stark_opts_parse",
+  } else if (STARK_EXPECT_FALSE(!(cli_opts->_flags & VERIFIED))) {
+    error(NULL, 0, "stark_cli_opts_parse",
           "not verified; did you forget "
-          "'stark_opts_init()'?");
+          "'stark_cli_opts_init()'?");
 
     return false;
   }
-#ifdef STARK_OPTS_ENABLE_HEAP
-  else if (STARK_EXPECT_FALSE(((opts->_flags & DIRTY) &&
-                               opts->_token_pool != NULL &&
-                               opts->_token != NULL))) {
-    error(NULL, 0, "stark_opts_parse",
-          "dirty; did you forget 'stark_opts_free_token_pool()' or "
-          "'stark_opts_free_group_pools()'?");
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+  else if (STARK_EXPECT_FALSE(((cli_opts->_flags & DIRTY) &&
+                               cli_opts->_token_pool != NULL &&
+                               cli_opts->_token != NULL))) {
+    error(NULL, 0, "stark_cli_opts_parse",
+          "dirty; did you forget 'stark_cli_opts_free_token_pool()' or "
+          "'stark_cli_opts_free_group_pools()'?");
 
     return false;
   }
@@ -996,14 +1012,14 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
 
   struct stark_opt *op;
 
-  for (int i = 0; i < opts->optc; i++) {
-    op = &opts->optv[i];
+  for (int i = 0; i < cli_opts->optc; i++) {
+    op = &cli_opts->optv[i];
     op->_fstate = NONE;
     op->arrc = 0;
   }
 
-#ifdef STARK_OPTS_ENABLE_HEAP
-  opts->_token_pool = malloc(
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+  cli_opts->_token_pool = malloc(
 #ifdef ARG_MAX
       ARG_MAX
 #else // ARG_MAX
@@ -1015,15 +1031,15 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
 #endif // ARG_MAX
   );
 
-  if (opts->_token_pool == NULL) {
-    error(NULL, 0, "stark_opts_parse", "allocation failed for token pool");
+  if (cli_opts->_token_pool == NULL) {
+    error(NULL, 0, "stark_cli_opts_parse", "allocation failed for token pool");
 
     return false;
   }
 
-  opts->_token = opts->_token_pool;
+  cli_opts->_token = cli_opts->_token_pool;
 
-#ifdef STARK_OPTS_ENABLE_ENV
+#ifdef STARK_CLI_OPTS_ENABLE_ENV
   char **envp;
 #ifdef _WIN32
   extern char **_environ;
@@ -1038,63 +1054,63 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
 #endif // _WIN32
 
   if (STARK_EXPECT_FALSE(envp == NULL)) {
-    error(NULL, 0, "stark_opts_parse",
+    error(NULL, 0, "stark_cli_opts_parse",
           "unsupported operating system for environment variable parsing; "
-          "remove STARK_OPTS_ENABLE_ENV");
+          "remove STARK_CLI_OPTS_ENABLE_ENV");
 
     return false;
   }
 
-  for (; *envp != NULL; envp++, opts->_flags |= VALUE_TOKEN) {
-    strcpy(opts->_token, *envp);
+  for (; *envp != NULL; envp++, cli_opts->_flags |= VALUE_TOKEN) {
+    strcpy(cli_opts->_token, *envp);
 
     if (STARK_EXPECT_FALSE(
-            (op = probe(opts, opts->_env_lut, STARK_OPTS_ENV_LUT_SIZE,
-                        LUT_TYPE_ENV)) != NULL)) {
+            (op = probe(cli_opts, cli_opts->_env_lut,
+                        STARK_CLI_OPTS_ENV_LUT_SIZE, LUT_TYPE_ENV)) != NULL)) {
 
-      if (STARK_EXPECT_FALSE(!assign_opt(opts, op))) {
+      if (STARK_EXPECT_FALSE(!assign_opt(cli_opts, op))) {
         return false;
       }
     }
   }
-#endif // STARK_OPTS_ENABLE_ENV
-#endif // STARK_OPTS_ENABLE_HEAP
+#endif // STARK_CLI_OPTS_ENABLE_ENV
+#endif // STARK_CLI_OPTS_ENABLE_HEAP
 
   size_t pos_idx = 0;
   bool eoo = false;
 
-  for (opts->_argc = argc - 1, opts->_argv = argv + 1, op = NULL,
-      opts->_flags |= VALUE_TOKEN;
-       opts->_argc > 0;
-       opts->_argc--, opts->_argv++, op = NULL, opts->_flags |= VALUE_TOKEN) {
-    if (STARK_EXPECT_FALSE((*opts->_argv) == NULL ||
-                           (*opts->_argv)[0] == '\0')) {
+  for (cli_opts->_argc = argc - 1, cli_opts->_argv = argv + 1, op = NULL,
+      cli_opts->_flags |= VALUE_TOKEN;
+       cli_opts->_argc > 0; cli_opts->_argc--, cli_opts->_argv++, op = NULL,
+      cli_opts->_flags |= VALUE_TOKEN) {
+    if (STARK_EXPECT_FALSE((*cli_opts->_argv) == NULL ||
+                           (*cli_opts->_argv)[0] == '\0')) {
       continue;
     }
 
-    if (eoo || (*opts->_argv)[0] != '-' || (*opts->_argv)[1] == '\0') {
-#ifdef STARK_OPTS_ENABLE_HEAP
-      strcpy(opts->_token, *opts->_argv);
+    if (eoo || (*cli_opts->_argv)[0] != '-' || (*cli_opts->_argv)[1] == '\0') {
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+      strcpy(cli_opts->_token, *cli_opts->_argv);
 #else
-      opts->_token = *opts->_argv;
+      cli_opts->_token = *cli_opts->_argv;
 #endif
-      op = !eoo ? probe(opts, opts->_psc_lut, STARK_OPTS_PSC_LUT_SIZE,
-                        LUT_TYPE_PSC)
+      op = !eoo ? probe(cli_opts, cli_opts->_psc_lut,
+                        STARK_CLI_OPTS_PSC_LUT_SIZE, LUT_TYPE_PSC)
                 : NULL;
 
       if (STARK_EXPECT_FALSE(op == NULL)) {
-        if ((!eoo) & (pos_idx == opts->_posc)) {
-          goto stark_opts_parse_uopt;
+        if ((!eoo) & (pos_idx == cli_opts->_posc)) {
+          goto stark_cli_opts_parse_uopt;
         } else {
-          op = opts->_pos_lut[pos_idx];
+          op = cli_opts->_pos_lut[pos_idx];
         }
       } else {
         op->_fstate = POSITIONAL;
       }
 
-      opts->_flags |= POS_OPT;
+      cli_opts->_flags |= POS_OPT;
 
-      if (STARK_EXPECT_FALSE(!assign_opt(opts, op))) {
+      if (STARK_EXPECT_FALSE(!assign_opt(cli_opts, op))) {
         return false;
       }
 
@@ -1105,36 +1121,37 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
       continue;
     }
 
-    opts->_flags &= ~POS_OPT;
+    cli_opts->_flags &= ~POS_OPT;
 
-    if ((*opts->_argv)[1] == '-') {
-      goto stark_opts_parse_lh;
+    if ((*cli_opts->_argv)[1] == '-') {
+      goto stark_cli_opts_parse_lh;
     }
 
     bool mop;
 
-#ifdef STARK_OPTS_ENABLE_HEAP
-    strcpy(opts->_token, &(*opts->_argv)[1]);
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+    strcpy(cli_opts->_token, &(*cli_opts->_argv)[1]);
 #else
-    opts->_token = &(*opts->_argv)[1];
+    cli_opts->_token = &(*cli_opts->_argv)[1];
 #endif
 
-    while (opts->_flags & VALUE_TOKEN) {
+    while (cli_opts->_flags & VALUE_TOKEN) {
       if (STARK_EXPECT_FALSE(
-              (op = opts->_sh_lut[(unsigned char)opts->_token[0]]) == NULL)) {
-        goto stark_opts_parse_uopt;
+              (op = cli_opts->_sh_lut[(unsigned char)cli_opts->_token[0]]) ==
+              NULL)) {
+        goto stark_cli_opts_parse_uopt;
       }
 
-      if ((mop = opts->_token[1] != '\0')) {
-        opts->_token = opts->_token + 1;
+      if ((mop = cli_opts->_token[1] != '\0')) {
+        cli_opts->_token = cli_opts->_token + 1;
       } else {
-        opts->_flags &= ~VALUE_TOKEN;
+        cli_opts->_flags &= ~VALUE_TOKEN;
       }
 
       op->_fstate = SHORTHAND;
-      opts->_flags &= ~LONG_OPT;
+      cli_opts->_flags &= ~LONG_OPT;
 
-      if (STARK_EXPECT_FALSE(!assign_opt(opts, op))) {
+      if (STARK_EXPECT_FALSE(!assign_opt(cli_opts, op))) {
         return false;
       }
 
@@ -1145,44 +1162,44 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
 
     continue;
 
-  stark_opts_parse_lh:
-    if ((*opts->_argv)[2] == '\0') {
+  stark_cli_opts_parse_lh:
+    if ((*cli_opts->_argv)[2] == '\0') {
       eoo = true;
       continue;
     }
 
-#ifdef STARK_OPTS_ENABLE_HEAP
-    strcpy(opts->_token, &(*opts->_argv)[2]);
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+    strcpy(cli_opts->_token, &(*cli_opts->_argv)[2]);
 #else
-    opts->_token = &(*opts->_argv)[2];
+    cli_opts->_token = &(*cli_opts->_argv)[2];
 #endif
 
-    if (STARK_EXPECT_FALSE((op = probe(opts, opts->_lh_lut,
-                                       STARK_OPTS_LH_LUT_SIZE, LUT_TYPE_LH)) ==
-                           NULL)) {
-      goto stark_opts_parse_uopt;
+    if (STARK_EXPECT_FALSE(
+            (op = probe(cli_opts, cli_opts->_lh_lut, STARK_CLI_OPTS_LH_LUT_SIZE,
+                        LUT_TYPE_LH)) == NULL)) {
+      goto stark_cli_opts_parse_uopt;
     }
 
-    opts->_flags |= LONG_OPT;
+    cli_opts->_flags |= LONG_OPT;
 
-    if (STARK_EXPECT_FALSE(!assign_opt(opts, op))) {
+    if (STARK_EXPECT_FALSE(!assign_opt(cli_opts, op))) {
       return false;
     }
 
     continue;
 
-  stark_opts_parse_uopt:
-    error(opts, STARK_OPTS_ERR_UNKNOWN_OPTION, NULL, opts->_token);
+  stark_cli_opts_parse_uopt:
+    error(cli_opts, STARK_CLI_OPTS_ERR_UNKNOWN_OPTION, NULL, cli_opts->_token);
 
     return false;
   }
 
-  for (int i = 0; i < opts->optc; i++) {
-    op = &opts->optv[i];
+  for (int i = 0; i < cli_opts->optc; i++) {
+    op = &cli_opts->optv[i];
 
     if (op->_fstate != NONE) {
       if (op->group != 0) {
-        for (struct stark_opt **oop = &opts->_group_table[op->group - 1][1];
+        for (struct stark_opt **oop = &cli_opts->_group_table[op->group - 1][1];
              *oop != NULL; oop++) {
           if (*oop == op) {
             continue;
@@ -1215,7 +1232,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
             break;
           }
 
-          error(opts, STARK_OPTS_ERR_CONFLICTING_OPTION, NULL, buf);
+          error(cli_opts, STARK_CLI_OPTS_ERR_CONFLICTING_OPTION, NULL, buf);
 
           return false;
         }
@@ -1232,7 +1249,7 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
               op->longhand != NULL ? op->longhand
                                    : (char[]){op->shorthand, '\0'});
 
-      error(opts, STARK_OPTS_ERR_MISSING_REQUIRED_OPTION, NULL, buf);
+      error(cli_opts, STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPTION, NULL, buf);
 
       return false;
     }
@@ -1241,25 +1258,27 @@ bool stark_opts_parse(struct stark_opts *const restrict opts, int const argc,
   return true;
 }
 
-#ifdef STARK_OPTS_ENABLE_HEAP
-void stark_opts_free_token_pool(struct stark_opts *const restrict opts) {
-  free(opts->_token_pool);
-  opts->_token_pool = NULL;
-  opts->_token = NULL;
-  opts->_flags &= ~DIRTY;
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+void stark_cli_opts_free_token_pool(
+    struct stark_cli_opts *const restrict cli_opts) {
+  free(cli_opts->_token_pool);
+  cli_opts->_token_pool = NULL;
+  cli_opts->_token = NULL;
+  cli_opts->_flags &= ~DIRTY;
 }
 
-void stark_opts_free_group_pools(struct stark_opts *const restrict opts) {
+void stark_cli_opts_free_group_pools(
+    struct stark_cli_opts *const restrict cli_opts) {
   for (int i = 0; i < 63; i++) {
-    free(opts->_group_table[i]);
-    opts->_group_table[i] = NULL;
+    free(cli_opts->_group_table[i]);
+    cli_opts->_group_table[i] = NULL;
   }
 }
 #endif
 
-#endif // STARK_OPTS_IMPL
+#endif // STARK_CLI_OPTS_IMPL
 
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-#endif // STARK__OPTS_H
+#endif // STARK_CLI_OPTS_H
