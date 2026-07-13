@@ -162,9 +162,7 @@ hash_table_hashn_djb2(char const *restrict str, size_t const key_len,
     }
   }
 
-  if (klp != NULL) {
-    *klp = idx;
-  }
+  *klp = idx;
 
   return hash;
 }
@@ -181,9 +179,7 @@ hash_table_hashn_fnv1a(char const *restrict str, size_t const key_len,
     }
   }
 
-  if (klp != NULL) {
-    *klp = idx;
-  }
+  *klp = idx;
 
   return hash;
 }
@@ -196,15 +192,16 @@ STARK_ALWAYS_INLINE static inline struct stark_hash_table_bucket *
 hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
                  size_t *const restrict klp, void *const restrict key,
                  size_t const key_len, uint8_t flags) {
-  if (htp == NULL) {
+  if (STARK_EXPECT_FALSE(htp == NULL)) {
     hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, "htp");
 
     return NULL;
-  } else if (key == NULL) {
+  } else if (STARK_EXPECT_FALSE(key == NULL)) {
     hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, "key");
 
     return NULL;
-  } else if (htp->tbl_size == 0 || (htp->tbl_size & (htp->tbl_size - 1)) != 0) {
+  } else if (STARK_EXPECT_FALSE(htp->tbl_size == 0 ||
+                                (htp->tbl_size & (htp->tbl_size - 1)) != 0)) {
     hash_table_error(STARK_HASH_TABLE_ERR_NOT_POWER_OF_TWO, rcp, NULL);
 
     return NULL;
@@ -230,10 +227,10 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
   }
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
-  if (htp->bkts == NULL) {
+  if (STARK_EXPECT_FALSE(htp->bkts == NULL)) {
     htp->bkts = calloc(htp->tbl_size, sizeof(*htp->bkts));
 
-    if (htp->bkts == NULL) {
+    if (STARK_EXPECT_FALSE(htp->bkts == NULL)) {
       hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
 
       return NULL;
@@ -272,7 +269,7 @@ hash_table_probe_retry:
   struct stark_hash_table_bucket *bkts = htp->bkts;
   void *tp = calloc(htp->tbl_size *= 2, sizeof(*bkts));
 
-  if (tp == NULL) {
+  if (STARK_EXPECT_FALSE(tp == NULL)) {
     hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
 
     htp->tbl_size >>= 1;
@@ -304,7 +301,7 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
                   enum stark_hash_table_err *const restrict rcp,
                   void *const restrict key, size_t const key_len,
                   void *const restrict val, uint8_t const flags) {
-  if (val == NULL) {
+  if (STARK_EXPECT_FALSE(val == NULL)) {
     hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, "val");
 
     return false;
@@ -319,10 +316,10 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
   }
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
-  if (!(flags & HASH_TABLE_MODE_RESIZE)) {
+  if (STARK_EXPECT_TRUE(!(flags & HASH_TABLE_MODE_RESIZE))) {
     void *const ktp = bkt->key != NULL ? bkt->key : malloc(tkl);
 
-    if (ktp == NULL) {
+    if (STARK_EXPECT_FALSE(ktp == NULL)) {
       hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
 
       return false;
@@ -332,7 +329,7 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
 
     void *const vtp = bkt->val != NULL ? bkt->val : malloc(htp->elem_size);
 
-    if (vtp == NULL) {
+    if (STARK_EXPECT_FALSE(vtp == NULL)) {
       if (bkt->key == NULL) {
         free(ktp);
       }

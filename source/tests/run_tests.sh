@@ -24,6 +24,9 @@ else
   esac
 fi
 
+cmake --preset release
+cmake --build --preset release --clean-first
+
 shopt -s nullglob
 
 for f in "${BUILD_DIR}"/test_*; do
