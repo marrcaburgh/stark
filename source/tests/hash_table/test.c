@@ -4,14 +4,20 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#define DEFAULT_TABLE_SIZE 64
+
 int main(void) {
-  struct stark_hash_table_bucket buckets[64] = {0};
+#ifndef STARK_HASH_TABLE_ENABLE_HEAP
+  struct stark_hash_table_bucket buckets[DEFAULT_TABLE_SIZE] = {0};
+#endif
 
   struct stark_hash_table hash_table = {.alg = STARK_HASH_TABLE_ALG_FNV1A,
-                                        .tbl_size = sizeof(buckets) /
-                                                    sizeof(buckets[0]),
+                                        .tbl_size = DEFAULT_TABLE_SIZE,
                                         .elem_size = sizeof(int32_t),
-                                        .bkts = buckets};
+#ifndef STARK_HASH_TABLE_ENABLE_HEAP
+                                        .bkts = buckets
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
+  };
 
   if (!stark_hash_table_insert(&hash_table, NULL, "my_key", &(int32_t){3532},
                                false)) {
@@ -19,13 +25,13 @@ int main(void) {
   }
 
   struct stark_hash_table_bucket *bucket =
-      stark_hash_table_extract("my_key", &hash_table);
+      stark_hash_table_extract(&hash_table, "my_key");
 
   if (bucket == NULL) {
     return 2;
   }
 
-  printf("val: %d\n", *(int *)bucket->val);
+  printf("val: %" PRId32 "\n", *(int32_t *)bucket->val);
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
   stark_hash_table_free_buckets(&hash_table);

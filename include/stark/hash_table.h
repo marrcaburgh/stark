@@ -1,6 +1,7 @@
 //
 // stark - a C99+ utility library - stark_hash_table - a flexible and simple
-// hash table Copyright (C) 2026 marrcaburgh
+// hash table
+// Copyright (C) 2026 marrcaburgh
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -31,8 +32,9 @@
 // Define these macros before including this header or with your build system:
 //
 // Define STARK_HASH_TABLE_ENABLE_HEAP to enable heap allocation and copying for
-// keys and values. The default (stack) path expects the keys and values to
-// remain valid throughout the entire lifetime of the bucket.
+// keys and values along with dynamic resizing. The default (stack) path expects
+// the keys and values to remain valid throughout the entire lifetime of the
+// bucket.
 //
 // Define STARK_HASH_TABLE_DISABLE_ERROR_PRINTING to disable builtin
 // developer-facing errors. You can still use rcp to get a return code.
@@ -59,7 +61,7 @@ typedef enum stark_hash_table_err {
 typedef enum stark_hash_table_algorithm {
   STARK_HASH_TABLE_ALG_FNV1A,
   STARK_HASH_TABLE_ALG_DJB2,
-} stark_hash_table_h_algorithm_t;
+} stark_hash_table_algorithm_t;
 
 typedef struct STARK_ALIGNED(32) stark_hash_table_bucket {
   void *key;
@@ -83,11 +85,11 @@ bool stark_hash_table_insert_key_len(struct stark_hash_table *htp,
                                      bool overwrite);
 
 struct stark_hash_table_bucket *
-stark_hash_table_extract(void const *key, struct stark_hash_table *htp);
+stark_hash_table_extract(struct stark_hash_table *htp, char const *key);
 
 struct stark_hash_table_bucket *
-stark_hash_table_extract_key_len(void const *key, size_t key_len,
-                                 struct stark_hash_table *htp);
+stark_hash_table_extract_key_len(struct stark_hash_table *htp, void const *key,
+                                 size_t key_len);
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
 
@@ -105,6 +107,7 @@ void stark_hash_table_free_buckets(struct stark_hash_table *htp);
 #define HASH_TABLE_RETURN_DUPLICATE (1 << 0)
 #define HASH_TABLE_MODE_EXTRACT (1 << 1)
 #define HASH_TABLE_MODE_BINARY (1 << 2)
+#define HASH_TABLE_MODE_RESIZE (1 << 3)
 
 STARK_COLD static void hash_table_error(enum stark_hash_table_err errc,
                                         enum stark_hash_table_err *rcp,
@@ -183,11 +186,16 @@ hash_table_hashn_fnv1a(char const *restrict str, size_t const key_len,
   return hash;
 }
 
+STARK_ALWAYS_INLINE static inline bool
+hash_table_insert(struct stark_hash_table *restrict htp,
+                  enum stark_hash_table_err *restrict rcp, void *restrict key,
+                  size_t key_len, void *restrict val, uint8_t flags);
+
 STARK_ALWAYS_INLINE static inline struct stark_hash_table_bucket *
 hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
                  size_t *const restrict klp, void *const restrict key,
                  size_t const key_len, uint8_t flags) {
-  if ((htp->tbl_size == 0) || ((htp->tbl_size & (htp->tbl_size - 1)) != 0)) {
+  if (htp->tbl_size == 0 || (htp->tbl_size & (htp->tbl_size - 1)) != 0) {
     hash_table_error(STARK_HASH_TABLE_ERR_NOT_POWER_OF_TWO, rcp, NULL);
 
     return NULL;
@@ -212,6 +220,19 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
     return NULL;
   }
 
+#ifdef STARK_HASH_TABLE_ENABLE_HEAP
+  if (htp->bkts == NULL) {
+    htp->bkts = calloc(htp->tbl_size, sizeof(struct stark_hash_table_bucket));
+
+    if (htp->bkts == NULL) {
+      hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
+    }
+
+    return NULL;
+  }
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
+
+hash_table_probe_retry:
   for (size_t pc = 0; pc != htp->tbl_size; pc++) {
     struct stark_hash_table_bucket *bkt =
         &htp->bkts[idx = (pc == 0 ? idx : idx + 1) & (htp->tbl_size - 1)];
@@ -237,7 +258,33 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
     return !(flags & HASH_TABLE_MODE_EXTRACT) ? bkt : NULL;
   }
 
+#ifdef STARK_HASH_TABLE_ENABLE_HEAP
+  struct stark_hash_table_bucket *bkts = htp->bkts;
+  void *tp = calloc(htp->tbl_size *= 2, sizeof(struct stark_hash_table_bucket));
+
+  if (tp == NULL) {
+    hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
+
+    htp->tbl_size >>= 1;
+
+    return NULL;
+  }
+
+  htp->bkts = tp;
+
+  for (size_t i = 0; i < (htp->tbl_size >> 1); i++) {
+    if (bkts[i].key != NULL) {
+      hash_table_insert(htp, rcp, bkts[i].key, bkts[i].key_len, bkts[i].val,
+                        HASH_TABLE_MODE_BINARY | HASH_TABLE_MODE_RESIZE);
+    }
+  }
+
+  free(bkts);
+
+  goto hash_table_probe_retry;
+#else
   hash_table_error(STARK_HASH_TABLE_ERR_FULL, rcp, NULL);
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
 
   return NULL;
 }
@@ -256,35 +303,39 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
   }
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
-  void *const ktp = bkt->key != NULL ? bkt->key : malloc(tkl);
+  if (!(flags & HASH_TABLE_MODE_RESIZE)) {
+    void *const ktp = bkt->key != NULL ? bkt->key : malloc(tkl);
 
-  if (ktp == NULL) {
-    hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
+    if (ktp == NULL) {
+      hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
 
-    return false;
-  }
-
-  memcpy(ktp, key, tkl);
-
-  void *const vtp = bkt->val != NULL ? bkt->val : malloc(htp->elem_size);
-
-  if (vtp == NULL) {
-    if (bkt->key == NULL) {
-      free(ktp);
+      return false;
     }
 
-    hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
+    memcpy(ktp, key, tkl);
 
-    return false;
+    void *const vtp = bkt->val != NULL ? bkt->val : malloc(htp->elem_size);
+
+    if (vtp == NULL) {
+      if (bkt->key == NULL) {
+        free(ktp);
+      }
+
+      hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
+
+      return false;
+    }
+
+    memcpy(vtp, val, htp->elem_size);
+
+    bkt->key = ktp;
+    bkt->val = vtp;
+  } else {
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
+    bkt->key = key;
+    bkt->val = val;
+#ifdef STARK_HASH_TABLE_ENABLE_HEAP
   }
-
-  memcpy(vtp, val, htp->elem_size);
-
-  bkt->key = ktp;
-  bkt->val = vtp;
-#else  // STARK_HASH_TABLE_ENABLE_HEAP
-  bkt->val = val;
-  bkt->key = key;
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
   bkt->key_len = tkl;
@@ -311,8 +362,8 @@ bool stark_hash_table_insert_key_len(
 }
 
 struct stark_hash_table_bucket *
-stark_hash_table_extract(void const *const restrict key,
-                         struct stark_hash_table *const restrict htp) {
+stark_hash_table_extract(struct stark_hash_table *const restrict htp,
+                         char const *const restrict key) {
   size_t tkl;
 
   return hash_table_probe(htp, NULL, &tkl, (void *)key, SIZE_MAX,
@@ -321,9 +372,9 @@ stark_hash_table_extract(void const *const restrict key,
 }
 
 struct stark_hash_table_bucket *
-stark_hash_table_extract_key_len(void const *const restrict key,
-                                 size_t const key_len,
-                                 struct stark_hash_table *const restrict htp) {
+stark_hash_table_extract_key_len(struct stark_hash_table *const restrict htp,
+                                 void const *const restrict key,
+                                 size_t const key_len) {
   size_t tkl;
 
   return hash_table_probe(htp, NULL, &tkl, (void *)key, key_len,
