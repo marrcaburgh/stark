@@ -186,10 +186,10 @@ hash_table_hashn_fnv1a(char const *restrict str, size_t const key_len,
   return hash;
 }
 
-STARK_ALWAYS_INLINE static inline bool
-hash_table_insert(struct stark_hash_table *restrict htp,
-                  enum stark_hash_table_err *restrict rcp, void *restrict key,
-                  size_t key_len, void *restrict val, uint8_t flags);
+static inline bool hash_table_insert(struct stark_hash_table *restrict htp,
+                                     enum stark_hash_table_err *restrict rcp,
+                                     void *restrict key, size_t key_len,
+                                     void *restrict val, uint8_t flags);
 
 STARK_ALWAYS_INLINE static inline struct stark_hash_table_bucket *
 hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
@@ -230,9 +230,9 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
 
     return NULL;
   }
-#endif // STARK_HASH_TABLE_ENABLE_HEAP
 
 hash_table_probe_retry:
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
   for (size_t pc = 0; pc != htp->tbl_size; pc++) {
     struct stark_hash_table_bucket *bkt =
         &htp->bkts[idx = (pc == 0 ? idx : idx + 1) & (htp->tbl_size - 1)];
@@ -289,7 +289,7 @@ hash_table_probe_retry:
   return NULL;
 }
 
-STARK_ALWAYS_INLINE static inline bool
+static inline bool
 hash_table_insert(struct stark_hash_table *const restrict htp,
                   enum stark_hash_table_err *const restrict rcp,
                   void *const restrict key, size_t key_len,
