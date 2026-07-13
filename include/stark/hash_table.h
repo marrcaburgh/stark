@@ -93,13 +93,10 @@ stark_hash_table_extract_key_len(struct stark_hash_table *htp, void const *key,
                                  size_t key_len);
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
-
 void stark_hash_table_free_buckets(struct stark_hash_table *htp);
-
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
 #ifdef STARK_HASH_TABLE_IMPL
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -202,11 +199,11 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
   if (htp == NULL) {
     hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, "htp");
 
-    return false;
+    return NULL;
   } else if (key == NULL) {
     hash_table_error(STARK_HASH_TABLE_ERR_FULL, rcp, "key");
 
-    return false;
+    return NULL;
   } else if (htp->tbl_size == 0 || (htp->tbl_size & (htp->tbl_size - 1)) != 0) {
     hash_table_error(STARK_HASH_TABLE_ERR_NOT_POWER_OF_TWO, rcp, NULL);
 
@@ -245,6 +242,7 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
 
 hash_table_probe_retry:
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
+
   for (size_t pc = 0; pc != htp->tbl_size; pc++) {
     struct stark_hash_table_bucket *bkt =
         &htp->bkts[idx = (pc == 0 ? idx : idx + 1) & (htp->tbl_size - 1)];
@@ -350,6 +348,7 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
     bkt->val = vtp;
   } else {
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
+
     bkt->key = key;
     bkt->val = val;
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
@@ -401,7 +400,6 @@ stark_hash_table_extract_key_len(struct stark_hash_table *const restrict htp,
 }
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
-
 void stark_hash_table_free_buckets(
     struct stark_hash_table *const restrict htp) {
   if (htp->bkts == NULL) {
@@ -427,7 +425,6 @@ void stark_hash_table_free_buckets(
   free(htp->bkts);
   htp->bkts = NULL;
 }
-
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
 #endif // STARK_HASH_TABLE_IMPL
