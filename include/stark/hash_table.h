@@ -201,7 +201,7 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
 
     return NULL;
   } else if (key == NULL) {
-    hash_table_error(STARK_HASH_TABLE_ERR_FULL, rcp, "key");
+    hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, "key");
 
     return NULL;
   } else if (htp->tbl_size == 0 || (htp->tbl_size & (htp->tbl_size - 1)) != 0) {
