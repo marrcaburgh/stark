@@ -30,10 +30,10 @@ cmake --build --preset release --clean-first
 shopt -s nullglob
 
 for f in "${BUILD_DIR}"/test_*; do
-  printf "\n${f}:\n"
-  ./${f}
+  printf "\n%s:\n" "${f}"
+  "${f}"
 done
 
 for f in "${BUILD_DIR}"/benchmark_*; do
-    perf stat -d --repeat 3 "${f}"
+    perf stat -d --repeat 3 -- "${f}"
 done
