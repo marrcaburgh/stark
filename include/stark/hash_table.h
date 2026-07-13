@@ -44,13 +44,14 @@
 extern "C" {
 #endif // __cplusplus
 
-#include "stark/core.h"
+#include "core.h"
 
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 
 typedef enum stark_hash_table_err {
+  STARK_HASH_TABLE_ERR_NULL,
   STARK_HASH_TABLE_ERR_NOT_POWER_OF_TWO,
   STARK_HASH_TABLE_ERR_INVALID_HASH_ALGORITHM,
   STARK_HASH_TABLE_ERR_DUPLICATE,
@@ -120,6 +121,10 @@ STARK_COLD static void hash_table_error(enum stark_hash_table_err errc,
   fprintf(stderr, "stark_hash_table error: ");
 
   switch (errc) {
+  case STARK_HASH_TABLE_ERR_NULL:
+    fprintf(stderr, "%s cannot be NULL", ctx);
+
+    break;
   case STARK_HASH_TABLE_ERR_NOT_POWER_OF_TWO:
     fprintf(stderr, "tbl_size must be a power of two");
 
@@ -186,16 +191,23 @@ hash_table_hashn_fnv1a(char const *restrict str, size_t const key_len,
   return hash;
 }
 
-static inline bool hash_table_insert(struct stark_hash_table *restrict htp,
-                                     enum stark_hash_table_err *restrict rcp,
-                                     void *restrict key, size_t key_len,
-                                     void *restrict val, uint8_t flags);
+static inline bool hash_table_insert(struct stark_hash_table *htp,
+                                     enum stark_hash_table_err *rcp, void *key,
+                                     size_t key_len, void *val, uint8_t flags);
 
 STARK_ALWAYS_INLINE static inline struct stark_hash_table_bucket *
 hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
                  size_t *const restrict klp, void *const restrict key,
                  size_t const key_len, uint8_t flags) {
-  if (htp->tbl_size == 0 || (htp->tbl_size & (htp->tbl_size - 1)) != 0) {
+  if (htp == NULL) {
+    hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, "htp");
+
+    return false;
+  } else if (key == NULL) {
+    hash_table_error(STARK_HASH_TABLE_ERR_FULL, rcp, "key");
+
+    return false;
+  } else if (htp->tbl_size == 0 || (htp->tbl_size & (htp->tbl_size - 1)) != 0) {
     hash_table_error(STARK_HASH_TABLE_ERR_NOT_POWER_OF_TWO, rcp, NULL);
 
     return NULL;
@@ -222,7 +234,7 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
   if (htp->bkts == NULL) {
-    htp->bkts = calloc(htp->tbl_size, sizeof(struct stark_hash_table_bucket));
+    htp->bkts = calloc(htp->tbl_size, sizeof(*htp->bkts));
 
     if (htp->bkts == NULL) {
       hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
@@ -260,7 +272,7 @@ hash_table_probe_retry:
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
   struct stark_hash_table_bucket *bkts = htp->bkts;
-  void *tp = calloc(htp->tbl_size *= 2, sizeof(struct stark_hash_table_bucket));
+  void *tp = calloc(htp->tbl_size *= 2, sizeof(*bkts));
 
   if (tp == NULL) {
     hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
@@ -292,8 +304,14 @@ hash_table_probe_retry:
 static inline bool
 hash_table_insert(struct stark_hash_table *const restrict htp,
                   enum stark_hash_table_err *const restrict rcp,
-                  void *const restrict key, size_t key_len,
-                  void *const restrict val, uint8_t flags) {
+                  void *const restrict key, size_t const key_len,
+                  void *const restrict val, uint8_t const flags) {
+  if (val == NULL) {
+    hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, "val");
+
+    return false;
+  }
+
   size_t tkl;
   struct stark_hash_table_bucket *bkt =
       hash_table_probe(htp, rcp, &tkl, key, key_len, flags);
@@ -346,7 +364,7 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
 bool stark_hash_table_insert(struct stark_hash_table *const restrict htp,
                              enum stark_hash_table_err *const restrict rcp,
                              char const *const restrict key,
-                             void *const restrict val, bool overwrite) {
+                             void *const restrict val, bool const overwrite) {
   return hash_table_insert(htp, rcp, (void *)key, SIZE_MAX, val,
                            overwrite ? HASH_TABLE_RETURN_DUPLICATE : 0);
 }
@@ -355,7 +373,7 @@ bool stark_hash_table_insert_key_len(
     struct stark_hash_table *const restrict htp,
     enum stark_hash_table_err *const restrict rcp,
     void const *const restrict key, size_t const key_len,
-    void *const restrict val, bool overwrite) {
+    void *const restrict val, bool const overwrite) {
   return hash_table_insert(htp, rcp, (void *)key, key_len, (void *)val,
                            (overwrite ? HASH_TABLE_RETURN_DUPLICATE : 0) |
                                HASH_TABLE_MODE_BINARY);
