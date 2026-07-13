@@ -25,8 +25,8 @@
 // Uncomment these to get syntax highlighting of the code in this header, the
 // default (stack) parts will still be grayed out:
 //
-#define STARK_HASH_TABLE_IMPL
-#define STARK_HASH_TABLE_ENABLE_HEAP
+// #define STARK_HASH_TABLE_IMPL
+// #define STARK_HASH_TABLE_ENABLE_HEAP
 //
 //
 // Define these macros before including this header or with your build system:
