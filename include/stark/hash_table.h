@@ -25,8 +25,8 @@
 // Uncomment these to get syntax highlighting of the code in this header, the
 // default (stack) parts will still be grayed out:
 //
-// #define STARK_HASH_TABLE_IMPL
-// #define STARK_HASH_TABLE_ENABLE_HEAP
+#define STARK_HASH_TABLE_IMPL
+#define STARK_HASH_TABLE_ENABLE_HEAP
 //
 //
 // Define these macros before including this header or with your build system:
@@ -391,10 +391,20 @@ void stark_hash_table_free_buckets(
 
     if (bkt->key != NULL) {
       free((char *)bkt->key);
+
+      bkt->key = NULL;
     }
 
     if (bkt->val != NULL) {
       free(bkt->val);
+
+      bkt->val = NULL;
+    }
+
+    if (htp->bkts != NULL) {
+      free(htp->bkts);
+
+      htp->bkts = NULL;
     }
   }
 }
