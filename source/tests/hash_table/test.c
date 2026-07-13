@@ -9,7 +9,7 @@
 int main(void) {
 #ifndef STARK_HASH_TABLE_ENABLE_HEAP
   struct stark_hash_table_bucket buckets[DEFAULT_TABLE_SIZE] = {0};
-#endif
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
 
   struct stark_hash_table hash_table = {.alg = STARK_HASH_TABLE_ALG_FNV1A,
                                         .tbl_size = DEFAULT_TABLE_SIZE,

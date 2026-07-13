@@ -235,9 +235,9 @@ hash_table_probe(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
 
     if (htp->bkts == NULL) {
       hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, NULL);
-    }
 
-    return NULL;
+      return NULL;
+    }
   }
 
 hash_table_probe_retry:
