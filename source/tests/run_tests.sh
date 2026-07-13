@@ -24,6 +24,8 @@ else
   esac
 fi
 
+shopt -s nullglob
+
 for f in "${BUILD_DIR}"/test_*; do
   printf "\n${f}:\n"
   ./${f}
