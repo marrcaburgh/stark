@@ -404,6 +404,10 @@ stark_hash_table_extract_key_len(struct stark_hash_table *const restrict htp,
 
 void stark_hash_table_free_buckets(
     struct stark_hash_table *const restrict htp) {
+  if (htp->bkts == NULL) {
+    return;
+  }
+
   for (size_t idx = 0; idx < htp->tbl_size; idx++) {
     struct stark_hash_table_bucket *const bkt = &htp->bkts[idx];
 
@@ -418,13 +422,10 @@ void stark_hash_table_free_buckets(
 
       bkt->val = NULL;
     }
-
-    if (htp->bkts != NULL) {
-      free(htp->bkts);
-
-      htp->bkts = NULL;
-    }
   }
+
+  free(htp->bkts);
+  htp->bkts = NULL;
 }
 
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
