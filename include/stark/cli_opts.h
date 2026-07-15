@@ -110,7 +110,7 @@ enum {
   STARK_OPT_MOD_ARRAY = (1 << 3),
 };
 
-typedef struct stark_opt {
+typedef struct STARK_ALIGNED(64) stark_opt {
   uint16_t type : 4;
   uint16_t mods : 4;
   uint16_t cb_tag : 1;
@@ -143,10 +143,9 @@ typedef struct stark_cli_opts {
       *_env_lut[STARK_CLI_OPTS_ENV_LUT_SIZE],
       *_pos_lut[STARK_CLI_OPTS_POS_LUT_SIZE], **_group_table[63];
   struct stark_opt *const optv;
-  char const *const restrict desc;
-  void (*const err_callback)(enum stark_cli_opts_err const errc,
-                             char const *ctx);
+  void (*const err_callback)(enum stark_opts_err const errc, char const *ctx);
   char *_token_pool, *_token, **_argv;
+  char const *const restrict desc;
   int _argc;
   int const optc;
   uint8_t _flags;
@@ -158,10 +157,11 @@ stark_cli_opts_init(struct stark_cli_opts *const restrict cli_opts);
 bool stark_cli_opts_parse(struct stark_cli_opts *const restrict cli_opts,
                           int const argc, char **argv);
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-void stark_cli_opts_free_token_pool(
-    struct stark_cli_opts *const restrict cli_opts);
-void stark_cli_opts_free_group_pools(
-    struct stark_cli_opts *const restrict cli_opts);
+STARK_COLD bool stark_opts_init(struct stark_opts *opts);
+bool stark_opts_parse(struct stark_opts *opts, int argc, char **argv);
+#ifdef STARK_OPTS_ENABLE_HEAP
+void stark_opts_free_token_pool(struct stark_opts *opts);
+void stark_opts_free_group_pools(struct stark_opts *opts);
 #endif
 
 #ifdef STARK_CLI_OPTS_IMPL
