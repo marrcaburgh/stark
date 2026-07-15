@@ -170,10 +170,11 @@ hash_table_hashn_djb2(char const *restrict str, size_t const key_len,
 STARK_ALWAYS_INLINE static inline size_t
 hash_table_hashn_fnv1a(char const *restrict str, size_t const key_len,
                        size_t *const restrict klp, bool binary) {
-  size_t hash = sizeof(size_t) == 8 ? 14695981039346656037U : 2166136261U, idx;
+  size_t hash = sizeof(size_t) == 8 ? 14695981039346656037ULL : 2166136261U,
+         idx;
 
   for (idx = 0; idx != key_len; idx++, hash ^= (unsigned char)*str++,
-      hash *= sizeof(size_t) == 8 ? 1099511628211U : 16777619U) {
+      hash *= sizeof(size_t) == 8 ? 1099511628211ULL : 16777619U) {
     if (*str == '\0' && !binary) {
       break;
     }
