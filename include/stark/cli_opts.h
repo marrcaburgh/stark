@@ -35,9 +35,9 @@ extern "C" {
 // Uncomment these to get syntax highlighting of the code in this header, the
 // default (stack) parts will still be grayed out:
 //
-#define STARK_CLI_OPTS_ENABLE_ENV
-#define STARK_CLI_OPTS_ENABLE_HEAP
-#define STARK_CLI_OPTS_IMPL
+// #define STARK_CLI_OPTS_ENABLE_ENV
+// #define STARK_CLI_OPTS_ENABLE_HEAP
+// #define STARK_CLI_OPTS_IMPL
 //
 //
 // Define these macros before including this header or with your build system:
@@ -154,9 +154,9 @@ typedef struct stark_cli_opts {
 
 STARK_COLD bool stark_cli_opts_init(struct stark_cli_opts *opts);
 bool stark_cli_opts_parse(struct stark_cli_opts *opts, int argc, char **argv);
-#ifdef STARK_OPTS_ENABLE_HEAP
-void stark_opts_free_token_pool(struct stark_cli_opts *opts);
-void stark_opts_free_group_pools(struct stark_cli_opts *opts);
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+void stark_cli_opts_free_token_pool(struct stark_cli_opts *opts);
+void stark_cli_opts_free_group_pools(struct stark_cli_opts *opts);
 #endif
 
 #ifdef STARK_CLI_OPTS_IMPL
@@ -190,13 +190,13 @@ enum {
   POSITIONAL,
 };
 
-STARK_COLD static void error(struct stark_cli_opts *const restrict cli_opts,
+STARK_COLD static void error(struct stark_cli_opts *const restrict opts,
                              enum stark_cli_opts_err const errc,
                              char const *const fname_octx,
                              char const *const err_ofmt, ...) {
-  if (cli_opts != NULL) {
-    if (cli_opts->err_callback != NULL) {
-      cli_opts->err_callback(errc, err_ofmt);
+  if (opts != NULL) {
+    if (opts->err_callback != NULL) {
+      opts->err_callback(errc, err_ofmt);
 
       return;
     }
@@ -204,17 +204,17 @@ STARK_COLD static void error(struct stark_cli_opts *const restrict cli_opts,
     switch (errc) {
     case STARK_CLI_OPTS_ERR_UNKNOWN_OPTION:
       fprintf(stderr, "unknown option: '%s%s'",
-              cli_opts->_flags & POS_OPT    ? ""
-              : cli_opts->_flags & LONG_OPT ? "--"
-                                            : "-",
+              opts->_flags & POS_OPT    ? ""
+              : opts->_flags & LONG_OPT ? "--"
+                                        : "-",
               err_ofmt);
 
       break;
     case STARK_CLI_OPTS_ERR_NO_VALUE:
       fprintf(stderr, "no value for option (expected: %s): '%s%s'", fname_octx,
-              cli_opts->_flags & POS_OPT    ? ""
-              : cli_opts->_flags & LONG_OPT ? "--"
-                                            : "-",
+              opts->_flags & POS_OPT    ? ""
+              : opts->_flags & LONG_OPT ? "--"
+                                        : "-",
               err_ofmt);
 
       break;
@@ -326,7 +326,7 @@ assign_opt_carr:
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
       strcpy(opts->_token, *opts->_argv);
 #else
-      cli_opts->_token = *cli_opts->_argv;
+      opts->_token = *opts->_argv;
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
       goto assign_opt_skip_vfind_os;
@@ -673,22 +673,22 @@ lut_insert(struct stark_opt *const restrict opt, struct stark_opt **lut,
 }
 
 STARK_COLD bool
-stark_cli_opts_init(struct stark_cli_opts *const restrict cli_opts) {
+stark_cli_opts_init(struct stark_cli_opts *const restrict opts) {
   bool ok = true, vp = false;
 
-  if (cli_opts == NULL) {
+  if (opts == NULL) {
     error(NULL, 0, "stark_cli_opts_init", "cli_opts cannot be NULL");
 
     return false;
-  } else if (cli_opts->optv == NULL) {
+  } else if (opts->optv == NULL) {
     error(NULL, 0, "stark_cli_opts_init", "optv cannot be NULL");
 
     return false;
-  } else if (cli_opts->optc <= 0) {
+  } else if (opts->optc <= 0) {
     error(NULL, 0, "stark_cli_opts_init", "optc must be greater than zero");
 
     return false;
-  } else if (cli_opts->_flags & VERIFIED) {
+  } else if (opts->_flags & VERIFIED) {
     return true;
   }
 
@@ -723,22 +723,22 @@ stark_cli_opts_init(struct stark_cli_opts *const restrict cli_opts) {
 
   int li = 0;
 stark_cli_opts_init_loop:
-  if (li == cli_opts->optc) {
+  if (li == opts->optc) {
     goto stark_cli_opts_init_loope;
   }
 
-  stark_opt_t *const restrict opt = &cli_opts->optv[li];
+  stark_opt_t *const restrict opt = &opts->optv[li];
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
   if (opt->group != 0) {
     size_t c = 1;
 
-    c += cli_opts->_group_table[opt->group - 1] != NULL
-             ? *((size_t *)cli_opts->_group_table[opt->group - 1])
+    c += opts->_group_table[opt->group - 1] != NULL
+             ? *((size_t *)opts->_group_table[opt->group - 1])
              : 1;
 
     struct stark_opt **tp =
-        realloc(cli_opts->_group_table[opt->group - 1],
+        realloc(opts->_group_table[opt->group - 1],
                 sizeof(size_t) + c * sizeof(struct stark_opt **));
 
     if (tp == NULL) {
@@ -748,9 +748,9 @@ stark_cli_opts_init_loop:
       return false;
     }
 
-    *((size_t *)(cli_opts->_group_table[opt->group - 1] = tp)) = c;
-    cli_opts->_group_table[opt->group - 1][c - 1] = opt;
-    cli_opts->_group_table[opt->group - 1][c] = NULL;
+    *((size_t *)(opts->_group_table[opt->group - 1] = tp)) = c;
+    opts->_group_table[opt->group - 1][c - 1] = opt;
+    opts->_group_table[opt->group - 1][c] = NULL;
   }
 #endif
 
@@ -776,7 +776,7 @@ stark_cli_opts_init_loop:
     default:
       if (opt->type != STARK_OPT_TYPE_BOOLEAN
 #ifndef STARK_CLI_OPTS_ENABLE_HEAP
-          && op->type != STARK_OPT_TYPE_STRING
+          && opt->type != STARK_OPT_TYPE_STRING
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
       ) {
         error(NULL, 0, "stark_cli_opts_init",
@@ -847,7 +847,7 @@ stark_cli_opts_init_skip_bltn:
         ok = false;
       } else {
         opt->_long_len = strlen(opt->longhand);
-        ok &= lut_insert(opt, cli_opts->_psc_lut, STARK_CLI_OPTS_PSC_LUT_SIZE,
+        ok &= lut_insert(opt, opts->_psc_lut, STARK_CLI_OPTS_PSC_LUT_SIZE,
                          LUT_TYPE_PSC);
       }
 
@@ -860,7 +860,7 @@ stark_cli_opts_init_skip_bltn:
       ok = false;
     }
 
-    if (cli_opts->_posc == STARK_CLI_OPTS_POS_LUT_SIZE) {
+    if (opts->_posc == STARK_CLI_OPTS_POS_LUT_SIZE) {
       error(NULL, 0, "stark_cli_opts_init",
             "positional option count exceeds limit; define "
             "STARK_CLI_OPTS_POS_LUT_SIZE before inclusion with a greater limit "
@@ -878,7 +878,7 @@ stark_cli_opts_init_skip_bltn:
       }
 
       vp = (opt->mods & STARK_OPT_MOD_ARRAY);
-      cli_opts->_pos_lut[cli_opts->_posc++] = opt;
+      opts->_pos_lut[opts->_posc++] = opt;
     }
 
   stark_cli_opts_init_skip_rpos:
@@ -895,8 +895,8 @@ stark_cli_opts_init_skip_bltn:
     goto stark_cli_opts_init_skip_sh;
   }
 
-  if (cli_opts->_sh_lut[opt->shorthand] == NULL) {
-    cli_opts->_sh_lut[opt->shorthand] = opt;
+  if (opts->_sh_lut[opt->shorthand] == NULL) {
+    opts->_sh_lut[opt->shorthand] = opt;
   } else {
     error(NULL, 0, "stark_cli_opts_init", "duplicate shorthand option '%c'",
           opt->shorthand);
@@ -906,13 +906,13 @@ stark_cli_opts_init_skip_bltn:
 
 stark_cli_opts_init_skip_sh:
   if (opt->longhand != NULL) {
-    ok &= lut_insert(opt, cli_opts->_lh_lut, STARK_CLI_OPTS_LH_LUT_SIZE,
-                     LUT_TYPE_LH);
+    ok &=
+        lut_insert(opt, opts->_lh_lut, STARK_CLI_OPTS_LH_LUT_SIZE, LUT_TYPE_LH);
   }
 
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   if (opt->env != NULL) {
-    ok &= lut_insert(opt, cli_opts->_env_lut, STARK_CLI_OPTS_ENV_LUT_SIZE,
+    ok &= lut_insert(opt, opts->_env_lut, STARK_CLI_OPTS_ENV_LUT_SIZE,
                      LUT_TYPE_ENV);
   }
 #endif
@@ -923,7 +923,7 @@ stark_cli_opts_init_skip_onc:
   goto stark_cli_opts_init_loop;
 
 stark_cli_opts_init_loope:
-  return cli_opts->_flags |= (ok ? VERIFIED : 0);
+  return opts->_flags |= (ok ? VERIFIED : 0);
 }
 
 STARK_ALWAYS_INLINE STARK_FLATTEN static inline struct stark_opt *
@@ -942,14 +942,14 @@ probe(struct stark_cli_opts *const restrict opts,
   for (size_t probes = 0, tkn_len = (size_t)(eq - opts->_token),
               i = hashn(opts->_token, tkn_len) & (lut_size - 1);
        probes != lut_size; i = (i + 1) & (lut_size - 1), probes++) {
-    struct stark_opt *op;
+    struct stark_opt *opt;
 
-    if (STARK_EXPECT_FALSE((op = lut[i]) == NULL)) {
+    if (STARK_EXPECT_FALSE((opt = lut[i]) == NULL)) {
       break;
     }
 
-    char const *const os = type == LUT_TYPE_ENV ? op->env : op->longhand;
-    uint8_t *const lp = type == LUT_TYPE_ENV ? &op->_env_len : &op->_long_len;
+    char const *const os = type == LUT_TYPE_ENV ? opt->env : opt->longhand;
+    uint8_t *const lp = type == LUT_TYPE_ENV ? &opt->_env_len : &opt->_long_len;
 
     if (STARK_EXPECT_TRUE(*lp == tkn_len &&
                           memcmp(os, opts->_token, tkn_len) == 0)) {
@@ -963,9 +963,9 @@ probe(struct stark_cli_opts *const restrict opts,
         opts->_flags &= ~VALUE_TOKEN;
       }
 
-      op->_fstate = LONGHAND;
+      opt->_fstate = LONGHAND;
 
-      return op;
+      return opt;
     }
   }
 
@@ -1087,7 +1087,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
       strcpy(opts->_token, *opts->_argv);
 #else
-      cli_opts->_token = *cli_opts->_argv;
+      opts->_token = *opts->_argv;
 #endif
       opt = !eoo ? probe(opts, opts->_psc_lut, STARK_CLI_OPTS_PSC_LUT_SIZE,
                          LUT_TYPE_PSC)
@@ -1127,7 +1127,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
     strcpy(opts->_token, &(*opts->_argv)[1]);
 #else
-    cli_opts->_token = &(*cli_opts->_argv)[1];
+    opts->_token = &(*opts->_argv)[1];
 #endif
 
     while (opts->_flags & VALUE_TOKEN) {
@@ -1165,7 +1165,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
     strcpy(opts->_token, &(*opts->_argv)[2]);
 #else
-    cli_opts->_token = &(*cli_opts->_argv)[2];
+    opts->_token = &(*opts->_argv)[2];
 #endif
 
     if (STARK_EXPECT_FALSE(
@@ -1254,18 +1254,18 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
 void stark_cli_opts_free_token_pool(
-    struct stark_cli_opts *const restrict cli_opts) {
-  free(cli_opts->_token_pool);
-  cli_opts->_token_pool = NULL;
-  cli_opts->_token = NULL;
-  cli_opts->_flags &= ~DIRTY;
+    struct stark_cli_opts *const restrict opts) {
+  free(opts->_token_pool);
+  opts->_token_pool = NULL;
+  opts->_token = NULL;
+  opts->_flags &= ~DIRTY;
 }
 
 void stark_cli_opts_free_group_pools(
-    struct stark_cli_opts *const restrict cli_opts) {
+    struct stark_cli_opts *const restrict opts) {
   for (int i = 0; i < 63; i++) {
-    free(cli_opts->_group_table[i]);
-    cli_opts->_group_table[i] = NULL;
+    free(opts->_group_table[i]);
+    opts->_group_table[i] = NULL;
   }
 }
 #endif
