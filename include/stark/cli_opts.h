@@ -296,7 +296,7 @@ assign_opt(struct stark_cli_opts *const restrict opts,
 
 assign_opt_carr:
   if (STARK_EXPECT_FALSE(opt->mods & STARK_OPT_MOD_ARRAY &&
-                         opt->arrc > opt->arrl)) {
+                         !(opt->arrc < opt->arrl))) {
     error(opts, STARK_CLI_OPTS_ERR_OOB, NULL, opts->_token);
 
     return false;
