@@ -1162,6 +1162,8 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       continue;
     }
 
+    opts->_flags |= LONG_OPT;
+
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
     strcpy(opts->_token, &(*opts->_argv)[2]);
 #else
@@ -1173,8 +1175,6 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
                          LUT_TYPE_LH)) == NULL)) {
       goto stark_cli_opts_parse_uopt;
     }
-
-    opts->_flags |= LONG_OPT;
 
     if (STARK_EXPECT_FALSE(!assign_opt(opts, opt))) {
       return false;
