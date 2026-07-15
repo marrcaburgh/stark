@@ -115,7 +115,13 @@ hash_table_probe(struct stark_hash_table *const restrict htp,
   }
 
   char const *tcp = key;
-  size_t idx = 0, ht_idx, ht_oidx;
+  size_t idx = 0, ht_idx
+#ifdef STARK_HASH_TABLE_ENABLE_HEAP
+      ,
+         ht_oidx;
+#else  // STARK_HASH_TABLE_ENABLE_HEAP
+      ;
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
 
   switch (htp->alg) {
   case STARK_HASH_TABLE_ALG_FNV1:
@@ -183,7 +189,9 @@ hash_table_probe(struct stark_hash_table *const restrict htp,
   }
 
   *klp = idx;
+#ifdef STARK_HASH_TABLE_ENABLE_HEAP
   ht_oidx = ht_idx;
+#endif // STARK_HASH_TABLE_ENABLE_HEAP
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
   if (STARK_EXPECT_FALSE(htp->bkts == NULL)) {
