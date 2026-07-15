@@ -15,4 +15,4 @@ A flexible and simple hash table
   
 3. run `cmake --build --preset release`
 
-4. run `./source/tests/<library>/run_tests.sh`
+4. run `./source/tests/run_tests.sh <library>`
