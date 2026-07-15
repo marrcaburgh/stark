@@ -46,4 +46,4 @@ target_link_libraries(benchmark_longhand_equals PRIVATE test)
 add_executable(benchmark_mixed benchmark_mixed.c)
 target_link_libraries(benchmark_mixed PRIVATE test)
 
-add_executable(benchmark_getopt benchmark_getopt.c)
+add_executable(benchmark_getopt_mixed benchmark_getopt_mixed.c)
