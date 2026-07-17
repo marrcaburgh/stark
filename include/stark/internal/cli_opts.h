@@ -29,19 +29,23 @@
 // #define STARK_CLI_OPTS_ENABLE_HEAP
 //
 
+#ifdef STARK_HASH_TABLE_IMPL
+#error                                                                         \
+    "the implementation of hash_table must be in a seperate translation unit from cli_opts"
+#else // STARK_HASH_TABLE_IMPL
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
 #undef STARK_HASH_TABLE_ENABLE_HEAP
 #define HASH_TABLE_RESTORE_HEAP
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
 #define STARK_HASH_TABLE_DISABLE_ERROR_PRINTING
-#define STARK_HASH_TABLE_IMPL
 #include "stark/internal/hash_table.h"
 
 #ifdef HASH_TABLE_RESTORE_HEAP
 #define STARK_HASH_TABLE_ENABLE_HEAP
 #undef HASH_TABLE_RESTORE_HEAP
 #endif // HASH_TABLE_RESTORE_HEAP
+#endif // STARK_HASH_TABLE_IMPL
 
 #include <errno.h>
 #include <float.h>
@@ -142,7 +146,7 @@ STARK_COLD static void error(struct stark_cli_opts *const restrict opts,
 
 STARK_NOINLINE static bool
 run_subcommand(struct stark_cli_opts *const restrict opts,
-               struct stark_opt *const restrict opt) {
+               struct stark_cli_opt *const restrict opt) {
   return stark_cli_opts_parse((struct stark_cli_opts *)opt->ctx, opts->_argc,
                               opts->_argv);
 }
@@ -155,17 +159,17 @@ help(STARK_UNUSED struct stark_cli_opts *const restrict opts) {
 
 STARK_ALWAYS_INLINE static inline bool
 assign_opt(struct stark_cli_opts *const restrict opts,
-           struct stark_opt *const restrict opt) {
+           struct stark_cli_opt *const restrict opt) {
   if (opt->callback.callback != NULL && opt->cb_tag == 0) {
     opt->callback.callback(opt->ctx);
 
     return true;
   } else if (opt->assign == NULL) {
-    if (opt->type == STARK_OPT_TYPE_HELP) {
+    if (opt->type == stark_cli_opt_TYPE_HELP) {
       help(opts);
 
       return true;
-    } else if (opt->type == STARK_OPT_TYPE_SUBCOMMAND) {
+    } else if (opt->type == stark_cli_opt_TYPE_SUBCOMMAND) {
       if (STARK_EXPECT_FALSE(!run_subcommand(opts, opt))) {
         return false;
       }
@@ -180,18 +184,18 @@ assign_opt(struct stark_cli_opts *const restrict opts,
   char *str = NULL, *delim = NULL, *rcp;
 
 assign_opt_carr:
-  if (STARK_EXPECT_FALSE(opt->mods & STARK_OPT_MOD_ARRAY &&
+  if (STARK_EXPECT_FALSE(opt->mods & stark_cli_opt_MOD_ARRAY &&
                          !(opt->arrc < opt->arrl))) {
     error(opts, STARK_CLI_OPTS_ERR_OOB, NULL, opts->_token);
 
     return false;
   }
 
-  if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
+  if (opt->type == stark_cli_opt_TYPE_BOOLEAN) {
     ((bool *)opt->dest)[opt->arrc] = true;
 
     goto assign_opt_skip_val;
-  } else if (opt->mods & STARK_OPT_MOD_POSITIONAL) {
+  } else if (opt->mods & stark_cli_opt_MOD_POSITIONAL) {
     goto assign_opt_skip_vfind_os;
   } else if (opts->_flags & VALUE_TOKEN) {
     opts->_flags &= ~VALUE_TOKEN;
@@ -221,25 +225,25 @@ assign_opt_carr:
   char const *ot;
 
   switch (opt->type) {
-  case STARK_OPT_TYPE_INT64:
-  case STARK_OPT_TYPE_INT32:
-  case STARK_OPT_TYPE_INT16:
-  case STARK_OPT_TYPE_INT8:
+  case stark_cli_opt_TYPE_INT64:
+  case stark_cli_opt_TYPE_INT32:
+  case stark_cli_opt_TYPE_INT16:
+  case stark_cli_opt_TYPE_INT8:
     ot = "a non-decimal number";
 
     break;
-  case STARK_OPT_TYPE_UINT64:
-  case STARK_OPT_TYPE_UINT32:
-  case STARK_OPT_TYPE_UINT16:
-  case STARK_OPT_TYPE_UINT8:
+  case stark_cli_opt_TYPE_UINT64:
+  case stark_cli_opt_TYPE_UINT32:
+  case stark_cli_opt_TYPE_UINT16:
+  case stark_cli_opt_TYPE_UINT8:
     ot = "a positive non-decimal number";
 
     break;
-  case STARK_OPT_TYPE_FLOAT64:
-  case STARK_OPT_TYPE_FLOAT32:
+  case stark_cli_opt_TYPE_FLOAT64:
+  case stark_cli_opt_TYPE_FLOAT32:
     ot = "a decimal number";
     break;
-  case STARK_OPT_TYPE_STRING:
+  case stark_cli_opt_TYPE_STRING:
     ot = "text";
     break;
   }
@@ -257,8 +261,8 @@ assign_opt_skip_vfind_os:
     }
 
     goto assign_opt_skip_bltn_os;
-  } else if (opt->type == STARK_OPT_TYPE_STRING) {
-    if (opt->mods & STARK_OPT_MOD_ARRAY) {
+  } else if (opt->type == stark_cli_opt_TYPE_STRING) {
+    if (opt->mods & stark_cli_opt_MOD_ARRAY) {
       char *tp = str;
 
     assign_opt_fnext_delim:
@@ -302,19 +306,19 @@ assign_opt_skip_vfind_os:
   } val;
   errno = 0;
 
-  if ((opt->type >= STARK_OPT_TYPE_INT64) &&
-      (opt->type <= STARK_OPT_TYPE_INT8)) {
+  if ((opt->type >= stark_cli_opt_TYPE_INT64) &&
+      (opt->type <= stark_cli_opt_TYPE_INT8)) {
     val.i = strtoll(str, &endptr, 0);
-  } else if ((opt->type >= STARK_OPT_TYPE_UINT64) &&
-             (opt->type <= STARK_OPT_TYPE_UINT8)) {
+  } else if ((opt->type >= stark_cli_opt_TYPE_UINT64) &&
+             (opt->type <= stark_cli_opt_TYPE_UINT8)) {
     val.ui = strtoull(str, &endptr, 0);
-  } else if (opt->type == STARK_OPT_TYPE_FLOAT64) {
+  } else if (opt->type == stark_cli_opt_TYPE_FLOAT64) {
     val.d = strtod(str, &endptr);
-  } else if (opt->type == STARK_OPT_TYPE_FLOAT32) {
+  } else if (opt->type == stark_cli_opt_TYPE_FLOAT32) {
     val.f = strtof(str, &endptr);
   }
 
-  if ((opt->mods & STARK_OPT_MOD_ARRAY) && *endptr == opt->delim) {
+  if ((opt->mods & stark_cli_opt_MOD_ARRAY) && *endptr == opt->delim) {
     opts->_token = (delim = endptr) + 1;
     opts->_flags |= VALUE_TOKEN;
   } else if (STARK_EXPECT_FALSE(endptr == str) || *endptr != '\0') {
@@ -324,7 +328,7 @@ assign_opt_skip_vfind_os:
   }
 
   switch (opt->type) {
-  case STARK_OPT_TYPE_INT64:
+  case stark_cli_opt_TYPE_INT64:
     if (STARK_EXPECT_FALSE(errno == ERANGE)) {
       sprintf(rs, "'%ld' to '%ld'", INT64_MIN, INT64_MAX);
 
@@ -335,7 +339,7 @@ assign_opt_skip_vfind_os:
     vp = &((int64_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_INT32:
+  case stark_cli_opt_TYPE_INT32:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.i > INT32_MAX ||
                            val.i < INT32_MIN)) {
       sprintf(rs, "'%d' to '%d'", INT32_MIN, INT32_MAX);
@@ -347,7 +351,7 @@ assign_opt_skip_vfind_os:
     vp = &((int32_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_INT16:
+  case stark_cli_opt_TYPE_INT16:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.i > INT16_MAX ||
                            val.i < INT16_MIN)) {
       sprintf(rs, "'%hd' to '%hd'", INT16_MIN, INT16_MAX);
@@ -359,7 +363,7 @@ assign_opt_skip_vfind_os:
     vp = &((int16_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_INT8:
+  case stark_cli_opt_TYPE_INT8:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.i > INT8_MAX ||
                            val.i < INT8_MIN)) {
       sprintf(rs, "'%hhd' to '%hhd'", INT8_MIN, INT8_MAX);
@@ -371,7 +375,7 @@ assign_opt_skip_vfind_os:
     vp = &((int8_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_UINT64:
+  case stark_cli_opt_TYPE_UINT64:
     for (rcp = str; *rcp == ' ' || *rcp == '\t'; rcp++)
       ;
 
@@ -385,7 +389,7 @@ assign_opt_skip_vfind_os:
     vp = &((uint64_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_UINT32:
+  case stark_cli_opt_TYPE_UINT32:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.ui > UINT32_MAX)) {
       sprintf(rs, "'%u' to '%u'", 0, UINT32_MAX);
 
@@ -396,7 +400,7 @@ assign_opt_skip_vfind_os:
     vp = &((uint32_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_UINT16:
+  case stark_cli_opt_TYPE_UINT16:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.ui > UINT16_MAX)) {
       sprintf(rs, "'%hu' to '%hu'", 0, UINT16_MAX);
 
@@ -407,7 +411,7 @@ assign_opt_skip_vfind_os:
     vp = &((uint16_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_UINT8:
+  case stark_cli_opt_TYPE_UINT8:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.ui > UINT8_MAX)) {
       sprintf(rs, "'%hhu' to '%hhu'", 0, UINT8_MAX);
 
@@ -418,7 +422,7 @@ assign_opt_skip_vfind_os:
     vp = &((uint8_t *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_FLOAT64:
+  case stark_cli_opt_TYPE_FLOAT64:
     if (STARK_EXPECT_FALSE(errno == ERANGE)) {
       sprintf(rs, "'%g' to '%g'", -DBL_MAX, DBL_MAX);
 
@@ -429,7 +433,7 @@ assign_opt_skip_vfind_os:
     vp = &((double *)opt->dest)[opt->arrc];
 
     goto assign_opt_skip_bltn_os;
-  case STARK_OPT_TYPE_FLOAT32:
+  case stark_cli_opt_TYPE_FLOAT32:
     if (STARK_EXPECT_FALSE(errno == ERANGE)) {
       sprintf(rs, "'%g' to '%g'", -FLT_MAX, FLT_MAX);
 
@@ -453,11 +457,11 @@ assign_opt_skip_bltn_os:
   }
 
 assign_opt_skip_val:
-  if (opt->mods & STARK_OPT_MOD_ARRAY) {
+  if (opt->mods & stark_cli_opt_MOD_ARRAY) {
     opt->arrc++;
 
     if (delim != NULL) {
-      if (opt->type == STARK_OPT_TYPE_STRING) {
+      if (opt->type == stark_cli_opt_TYPE_STRING) {
         *delim = '\0';
       }
 
@@ -473,8 +477,8 @@ assign_opt_skip_val:
 }
 
 STARK_COLD STARK_ALWAYS_INLINE static inline bool
-lut_insert(struct stark_opt *const restrict opt, struct stark_hash_table *lut,
-           uint8_t const type) {
+lut_insert(struct stark_cli_opt *const restrict opt,
+           struct stark_hash_table *lut, uint8_t const type) {
   char const *ot, *ls, *os;
   size_t len = 0;
 
@@ -537,7 +541,7 @@ lut_insert(struct stark_opt *const restrict opt, struct stark_hash_table *lut,
   return false;
 }
 
-STARK_ALWAYS_INLINE STARK_FLATTEN static inline struct stark_opt *
+STARK_ALWAYS_INLINE STARK_FLATTEN static inline struct stark_cli_opt *
 probe(struct stark_cli_opts *const restrict opts,
       struct stark_hash_table *const restrict lut, uint8_t const type) {
   char *restrict eq = opts->_token;
@@ -565,9 +569,9 @@ probe(struct stark_cli_opts *const restrict opts,
       opts->_flags &= ~VALUE_TOKEN;
     }
 
-    ((struct stark_opt *)bkt->val)->_fstate = LONGHAND;
+    ((struct stark_cli_opt *)bkt->val)->_fstate = LONGHAND;
 
-    return (struct stark_opt *)bkt->val;
+    return (struct stark_cli_opt *)bkt->val;
   }
 
   return NULL;

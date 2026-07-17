@@ -85,48 +85,47 @@ typedef enum stark_cli_opts_err {
 
 enum {
   /* regular types */
-  STARK_OPT_TYPE_BOOLEAN = 0,
-  STARK_OPT_TYPE_INT64 = 1,
-  STARK_OPT_TYPE_INT32 = 2,
-  STARK_OPT_TYPE_INT16 = 3,
-  STARK_OPT_TYPE_INT8 = 4,
-  STARK_OPT_TYPE_UINT64 = 5,
-  STARK_OPT_TYPE_UINT32 = 6,
-  STARK_OPT_TYPE_UINT16 = 7,
-  STARK_OPT_TYPE_UINT8 = 8,
-  STARK_OPT_TYPE_FLOAT64 = 9,
-  STARK_OPT_TYPE_FLOAT32 = 10,
-  STARK_OPT_TYPE_STRING = 11,
+  stark_cli_opt_TYPE_BOOLEAN = 0,
+  stark_cli_opt_TYPE_INT64 = 1,
+  stark_cli_opt_TYPE_INT32 = 2,
+  stark_cli_opt_TYPE_INT16 = 3,
+  stark_cli_opt_TYPE_INT8 = 4,
+  stark_cli_opt_TYPE_UINT64 = 5,
+  stark_cli_opt_TYPE_UINT32 = 6,
+  stark_cli_opt_TYPE_UINT16 = 7,
+  stark_cli_opt_TYPE_UINT8 = 8,
+  stark_cli_opt_TYPE_FLOAT64 = 9,
+  stark_cli_opt_TYPE_FLOAT32 = 10,
+  stark_cli_opt_TYPE_STRING = 11,
 
   /* special types */
-  STARK_OPT_TYPE_SUBCOMMAND = 12,
+  stark_cli_opt_TYPE_SUBCOMMAND = 12,
 
   /* bltn types */
-  STARK_OPT_TYPE_HELP = 13,
+  stark_cli_opt_TYPE_HELP = 13,
 };
 
 enum {
-  STARK_OPT_MOD_REQUIRED = (1 << 0),
-  STARK_OPT_MOD_HIDDEN = (1 << 1),
-  STARK_OPT_MOD_POSITIONAL = (1 << 2),
-  STARK_OPT_MOD_ARRAY = (1 << 3),
+  stark_cli_opt_MOD_REQUIRED = (1 << 0),
+  stark_cli_opt_MOD_HIDDEN = (1 << 1),
+  stark_cli_opt_MOD_POSITIONAL = (1 << 2),
+  stark_cli_opt_MOD_ARRAY = (1 << 3),
 };
 
-typedef struct STARK_ALIGNED(64) stark_opt {
-  uint16_t type : 4;
-  uint16_t mods : 4;
-  uint16_t cb_tag : 1;
-  uint16_t _fstate : 2;
-  uint16_t group : 5;                  // 2 bytes
-  uint8_t arrc;                        // 1 byte
-  uint8_t const arrl;                  // 1 byte
-  char const delim;                    // 1 byte
-  unsigned char const shorthand;       // 1 byte
-  uint8_t _long_len;                   // 1 byte
-  uint8_t _env_len;                    // 1 byte
-  char const *const restrict longhand; // 8 bytes
-  char const *const restrict env;      // 8 bytes
-  void *const restrict dest;           // 8 bytes
+typedef struct STARK_ALIGNED(64) stark_cli_opt {
+  uint8_t type : 4;
+  uint8_t mods : 4;
+  uint8_t group : 5;
+  uint8_t cb_tag : 1;
+  uint8_t _fstate : 2;
+  uint8_t arrc;
+  uint8_t const arrl;
+  char const delim;
+  unsigned char const shorthand;
+  uint8_t pad[2];
+  char const *const restrict longhand;
+  char const *const restrict env;
+  void *const restrict dest;
   bool (*const assign)(char const *const restrict str,
                        void *const restrict dest, uint8_t const arrc,
                        void *restrict *const restrict vpp);
@@ -134,17 +133,17 @@ typedef struct STARK_ALIGNED(64) stark_opt {
     void (*const callback)(const void *const restrict ctx);
     bool (*const validate)(const void *const restrict val,
                            const void *const restrict ctx);
-  } callback;                       // 8 bytes
-  void *const restrict ctx;         // 8 bytes
-  char const *const restrict usage; // 8 bytes
-} stark_opt_t; // Fits into one 64-bit L1 cache line or 64 bytes of memory.
+  } callback;
+  void *const restrict ctx;
+  char const *const restrict usage;
+} stark_cli_opt_t; // Fits into one 64-bit L1 cache line or 64 bytes of memory.
 
 typedef struct stark_cli_opts {
   struct stark_hash_table _lh_lut, _psc_lut, _env_lut;
   struct stark_hash_table_bucket _lh_lut_bkts[STARK_CLI_OPTS_LH_LUT_SIZE],
       _psc_lut_bkts[STARK_CLI_OPTS_PSC_LUT_SIZE],
       _env_lut_bkts[STARK_CLI_OPTS_ENV_LUT_SIZE];
-  struct stark_opt *const optv, **_group_table[63], *_sh_lut[256],
+  struct stark_cli_opt *const optv, **_group_table[63], *_sh_lut[256],
       *_pos_lut[STARK_CLI_OPTS_POS_LUT_SIZE];
   void (*const err_callback)(enum stark_cli_opts_err const errc,
                              char const *ctx);
@@ -212,7 +211,7 @@ stark_cli_opts_init_loop:
     goto stark_cli_opts_init_loope;
   }
 
-  stark_opt_t *const restrict opt = &opts->optv[li];
+  stark_cli_opt_t *const restrict opt = &opts->optv[li];
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
   if (opt->group != 0) {
@@ -222,8 +221,8 @@ stark_cli_opts_init_loop:
              ? *((size_t *)opts->_group_table[opt->group - 1])
              : 1;
 
-    struct stark_opt **tp = realloc(opts->_group_table[opt->group - 1],
-                                    sizeof(size_t) + c * sizeof(void *));
+    struct stark_cli_opt **tp = realloc(opts->_group_table[opt->group - 1],
+                                        sizeof(size_t) + c * sizeof(void *));
 
     if (tp == NULL) {
       error(NULL, 0, "stark_cli_opts_init",
@@ -238,7 +237,7 @@ stark_cli_opts_init_loop:
   }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-  if (opt->mods & STARK_OPT_MOD_ARRAY) {
+  if (opt->mods & stark_cli_opt_MOD_ARRAY) {
     if (opt->arrl <= 1) {
       error(NULL, 0, "stark_cli_opts_init",
             "array options must have an arrl that is greater than one");
@@ -250,7 +249,7 @@ stark_cli_opts_init_loop:
     case ',':
     case ':':
     case ';':
-      if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
+      if (opt->type == stark_cli_opt_TYPE_BOOLEAN) {
         error(NULL, 0, "stark_cli_opts_init",
               "boolean options cannot have delimiters");
 
@@ -258,9 +257,9 @@ stark_cli_opts_init_loop:
       }
       break;
     default:
-      if (opt->type != STARK_OPT_TYPE_BOOLEAN
+      if (opt->type != stark_cli_opt_TYPE_BOOLEAN
 #ifndef STARK_CLI_OPTS_ENABLE_HEAP
-          && opt->type != STARK_OPT_TYPE_STRING
+          && opt->type != stark_cli_opt_TYPE_STRING
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
       ) {
         error(NULL, 0, "stark_cli_opts_init",
@@ -288,18 +287,18 @@ stark_cli_opts_init_loop:
   }
 
   switch (opt->type) {
-  case STARK_OPT_TYPE_STRING:
-  case STARK_OPT_TYPE_INT64:
-  case STARK_OPT_TYPE_INT32:
-  case STARK_OPT_TYPE_INT16:
-  case STARK_OPT_TYPE_INT8:
-  case STARK_OPT_TYPE_UINT64:
-  case STARK_OPT_TYPE_UINT32:
-  case STARK_OPT_TYPE_UINT16:
-  case STARK_OPT_TYPE_UINT8:
-  case STARK_OPT_TYPE_FLOAT64:
-  case STARK_OPT_TYPE_FLOAT32:
-  case STARK_OPT_TYPE_BOOLEAN:
+  case stark_cli_opt_TYPE_STRING:
+  case stark_cli_opt_TYPE_INT64:
+  case stark_cli_opt_TYPE_INT32:
+  case stark_cli_opt_TYPE_INT16:
+  case stark_cli_opt_TYPE_INT8:
+  case stark_cli_opt_TYPE_UINT64:
+  case stark_cli_opt_TYPE_UINT32:
+  case stark_cli_opt_TYPE_UINT16:
+  case stark_cli_opt_TYPE_UINT8:
+  case stark_cli_opt_TYPE_FLOAT64:
+  case stark_cli_opt_TYPE_FLOAT32:
+  case stark_cli_opt_TYPE_BOOLEAN:
     if (opt->dest == NULL) {
       error(NULL, 0, "stark_cli_opts_init",
             "option missing destination pointer");
@@ -308,7 +307,7 @@ stark_cli_opts_init_loop:
     }
 
     break;
-  case STARK_OPT_TYPE_SUBCOMMAND:
+  case stark_cli_opt_TYPE_SUBCOMMAND:
     if (opt->ctx == NULL) {
       error(NULL, 0, "stark_cli_opts_init",
             "subcommand option missing context");
@@ -317,25 +316,24 @@ stark_cli_opts_init_loop:
     }
 
     break;
-  case STARK_OPT_TYPE_HELP:
+  case stark_cli_opt_TYPE_HELP:
     break;
   }
 
 stark_cli_opts_init_skip_bltn:
-  if (opt->mods & STARK_OPT_MOD_POSITIONAL) {
-    if (opt->type == STARK_OPT_TYPE_SUBCOMMAND) {
+  if (opt->mods & stark_cli_opt_MOD_POSITIONAL) {
+    if (opt->type == stark_cli_opt_TYPE_SUBCOMMAND) {
       if (opt->longhand == NULL) {
         error(NULL, 0, "stark_cli_opts_init",
               "positional subcommand options must have a longhand");
 
         ok = false;
       } else {
-        opt->_long_len = strlen(opt->longhand);
         ok &= lut_insert(opt, &opts->_psc_lut, LUT_TYPE_PSC);
       }
 
       goto stark_cli_opts_init_skip_rpos;
-    } else if (opt->type == STARK_OPT_TYPE_BOOLEAN) {
+    } else if (opt->type == stark_cli_opt_TYPE_BOOLEAN) {
       error(NULL, 0, "stark_cli_opts_init",
             "positional option modifier cannot be combined with boolean "
             "type");
@@ -360,7 +358,7 @@ stark_cli_opts_init_skip_bltn:
         ok = false;
       }
 
-      vp = (opt->mods & STARK_OPT_MOD_ARRAY);
+      vp = (opt->mods & stark_cli_opt_MOD_ARRAY);
       opts->_pos_lut[opts->_posc++] = opt;
     }
 
@@ -440,7 +438,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
   }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-  struct stark_opt *opt;
+  struct stark_cli_opt *opt;
 
   for (int i = 0; i < opts->optc; i++) {
     opt = &opts->optv[i];
@@ -624,7 +622,8 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
     if (opt->_fstate != NONE) {
       if (opt->group != 0) {
-        for (struct stark_opt **oop = &opts->_group_table[opt->group - 1][1];
+        for (struct stark_cli_opt **oop =
+                 &opts->_group_table[opt->group - 1][1];
              *oop != NULL; oop++) {
           if (*oop == opt) {
             continue;
@@ -662,12 +661,12 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
           return false;
         }
       }
-    } else if (opt->mods & STARK_OPT_MOD_REQUIRED) {
+    } else if (opt->mods & stark_cli_opt_MOD_REQUIRED) {
       char buf[UINT8_MAX + 7];
 
       sprintf(buf,
-              (opt->mods & STARK_OPT_MOD_POSITIONAL) &&
-                      (opt->type == STARK_OPT_TYPE_SUBCOMMAND)
+              (opt->mods & stark_cli_opt_MOD_POSITIONAL) &&
+                      (opt->type == stark_cli_opt_TYPE_SUBCOMMAND)
                   ? "%s"
               : opt->longhand != NULL ? "--%s"
                                       : "-%s",
