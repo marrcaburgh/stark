@@ -11,7 +11,7 @@ extern double d, f, g, h, j, k, f64a[];
 extern char const *l, *z, *x, *c, *v, *b, *stra[];
 
 extern struct stark_cli_opts subcommand;
-extern struct stark_opt optv[];
+extern struct stark_cli_opt optv[];
 extern int const optc;
 
 void init_env(bool lh);

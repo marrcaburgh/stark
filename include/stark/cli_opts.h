@@ -85,31 +85,31 @@ typedef enum stark_cli_opts_err {
 
 enum {
   /* regular types */
-  stark_cli_opt_TYPE_BOOLEAN = 0,
-  stark_cli_opt_TYPE_INT64 = 1,
-  stark_cli_opt_TYPE_INT32 = 2,
-  stark_cli_opt_TYPE_INT16 = 3,
-  stark_cli_opt_TYPE_INT8 = 4,
-  stark_cli_opt_TYPE_UINT64 = 5,
-  stark_cli_opt_TYPE_UINT32 = 6,
-  stark_cli_opt_TYPE_UINT16 = 7,
-  stark_cli_opt_TYPE_UINT8 = 8,
-  stark_cli_opt_TYPE_FLOAT64 = 9,
-  stark_cli_opt_TYPE_FLOAT32 = 10,
-  stark_cli_opt_TYPE_STRING = 11,
+  STARK_CLI_OPT_TYPE_BOOLEAN = 0,
+  STARK_CLI_OPT_TYPE_INT64 = 1,
+  STARK_CLI_OPT_TYPE_INT32 = 2,
+  STARK_CLI_OPT_TYPE_INT16 = 3,
+  STARK_CLI_OPT_TYPE_INT8 = 4,
+  STARK_CLI_OPT_TYPE_UINT64 = 5,
+  STARK_CLI_OPT_TYPE_UINT32 = 6,
+  STARK_CLI_OPT_TYPE_UINT16 = 7,
+  STARK_CLI_OPT_TYPE_UINT8 = 8,
+  STARK_CLI_OPT_TYPE_FLOAT64 = 9,
+  STARK_CLI_OPT_TYPE_FLOAT32 = 10,
+  STARK_CLI_OPT_TYPE_STRING = 11,
 
   /* special types */
-  stark_cli_opt_TYPE_SUBCOMMAND = 12,
+  STARK_CLI_OPT_TYPE_SUBCOMMAND = 12,
 
   /* bltn types */
-  stark_cli_opt_TYPE_HELP = 13,
+  STARK_CLI_OPT_TYPE_HELP = 13,
 };
 
 enum {
-  stark_cli_opt_MOD_REQUIRED = (1 << 0),
-  stark_cli_opt_MOD_HIDDEN = (1 << 1),
-  stark_cli_opt_MOD_POSITIONAL = (1 << 2),
-  stark_cli_opt_MOD_ARRAY = (1 << 3),
+  STARK_CLI_OPT_MOD_REQUIRED = (1 << 0),
+  STARK_CLI_OPT_MOD_HIDDEN = (1 << 1),
+  STARK_CLI_OPT_MOD_POSITIONAL = (1 << 2),
+  STARK_CLI_OPT_MOD_ARRAY = (1 << 3),
 };
 
 typedef struct STARK_ALIGNED(64) stark_cli_opt {
@@ -237,7 +237,7 @@ stark_cli_opts_init_loop:
   }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-  if (opt->mods & stark_cli_opt_MOD_ARRAY) {
+  if (opt->mods & STARK_CLI_OPT_MOD_ARRAY) {
     if (opt->arrl <= 1) {
       error(NULL, 0, "stark_cli_opts_init",
             "array options must have an arrl that is greater than one");
@@ -249,7 +249,7 @@ stark_cli_opts_init_loop:
     case ',':
     case ':':
     case ';':
-      if (opt->type == stark_cli_opt_TYPE_BOOLEAN) {
+      if (opt->type == STARK_CLI_OPT_TYPE_BOOLEAN) {
         error(NULL, 0, "stark_cli_opts_init",
               "boolean options cannot have delimiters");
 
@@ -257,9 +257,9 @@ stark_cli_opts_init_loop:
       }
       break;
     default:
-      if (opt->type != stark_cli_opt_TYPE_BOOLEAN
+      if (opt->type != STARK_CLI_OPT_TYPE_BOOLEAN
 #ifndef STARK_CLI_OPTS_ENABLE_HEAP
-          && opt->type != stark_cli_opt_TYPE_STRING
+          && opt->type != STARK_CLI_OPT_TYPE_STRING
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
       ) {
         error(NULL, 0, "stark_cli_opts_init",
@@ -287,18 +287,18 @@ stark_cli_opts_init_loop:
   }
 
   switch (opt->type) {
-  case stark_cli_opt_TYPE_STRING:
-  case stark_cli_opt_TYPE_INT64:
-  case stark_cli_opt_TYPE_INT32:
-  case stark_cli_opt_TYPE_INT16:
-  case stark_cli_opt_TYPE_INT8:
-  case stark_cli_opt_TYPE_UINT64:
-  case stark_cli_opt_TYPE_UINT32:
-  case stark_cli_opt_TYPE_UINT16:
-  case stark_cli_opt_TYPE_UINT8:
-  case stark_cli_opt_TYPE_FLOAT64:
-  case stark_cli_opt_TYPE_FLOAT32:
-  case stark_cli_opt_TYPE_BOOLEAN:
+  case STARK_CLI_OPT_TYPE_STRING:
+  case STARK_CLI_OPT_TYPE_INT64:
+  case STARK_CLI_OPT_TYPE_INT32:
+  case STARK_CLI_OPT_TYPE_INT16:
+  case STARK_CLI_OPT_TYPE_INT8:
+  case STARK_CLI_OPT_TYPE_UINT64:
+  case STARK_CLI_OPT_TYPE_UINT32:
+  case STARK_CLI_OPT_TYPE_UINT16:
+  case STARK_CLI_OPT_TYPE_UINT8:
+  case STARK_CLI_OPT_TYPE_FLOAT64:
+  case STARK_CLI_OPT_TYPE_FLOAT32:
+  case STARK_CLI_OPT_TYPE_BOOLEAN:
     if (opt->dest == NULL) {
       error(NULL, 0, "stark_cli_opts_init",
             "option missing destination pointer");
@@ -307,7 +307,7 @@ stark_cli_opts_init_loop:
     }
 
     break;
-  case stark_cli_opt_TYPE_SUBCOMMAND:
+  case STARK_CLI_OPT_TYPE_SUBCOMMAND:
     if (opt->ctx == NULL) {
       error(NULL, 0, "stark_cli_opts_init",
             "subcommand option missing context");
@@ -316,13 +316,13 @@ stark_cli_opts_init_loop:
     }
 
     break;
-  case stark_cli_opt_TYPE_HELP:
+  case STARK_CLI_OPT_TYPE_HELP:
     break;
   }
 
 stark_cli_opts_init_skip_bltn:
-  if (opt->mods & stark_cli_opt_MOD_POSITIONAL) {
-    if (opt->type == stark_cli_opt_TYPE_SUBCOMMAND) {
+  if (opt->mods & STARK_CLI_OPT_MOD_POSITIONAL) {
+    if (opt->type == STARK_CLI_OPT_TYPE_SUBCOMMAND) {
       if (opt->longhand == NULL) {
         error(NULL, 0, "stark_cli_opts_init",
               "positional subcommand options must have a longhand");
@@ -333,7 +333,7 @@ stark_cli_opts_init_skip_bltn:
       }
 
       goto stark_cli_opts_init_skip_rpos;
-    } else if (opt->type == stark_cli_opt_TYPE_BOOLEAN) {
+    } else if (opt->type == STARK_CLI_OPT_TYPE_BOOLEAN) {
       error(NULL, 0, "stark_cli_opts_init",
             "positional option modifier cannot be combined with boolean "
             "type");
@@ -358,7 +358,7 @@ stark_cli_opts_init_skip_bltn:
         ok = false;
       }
 
-      vp = (opt->mods & stark_cli_opt_MOD_ARRAY);
+      vp = (opt->mods & STARK_CLI_OPT_MOD_ARRAY);
       opts->_pos_lut[opts->_posc++] = opt;
     }
 
@@ -661,12 +661,12 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
           return false;
         }
       }
-    } else if (opt->mods & stark_cli_opt_MOD_REQUIRED) {
+    } else if (opt->mods & STARK_CLI_OPT_MOD_REQUIRED) {
       char buf[UINT8_MAX + 7];
 
       sprintf(buf,
-              (opt->mods & stark_cli_opt_MOD_POSITIONAL) &&
-                      (opt->type == stark_cli_opt_TYPE_SUBCOMMAND)
+              (opt->mods & STARK_CLI_OPT_MOD_POSITIONAL) &&
+                      (opt->type == STARK_CLI_OPT_TYPE_SUBCOMMAND)
                   ? "%s"
               : opt->longhand != NULL ? "--%s"
                                       : "-%s",
