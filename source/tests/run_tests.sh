@@ -9,12 +9,17 @@ if [ "$#" -ne 1 ]; then
 
   exit 16
 else
+
   case "$1" in
     "cli_opts")
       BUILD_DIR+="cli_opts"
+      cmake --preset release -DCOMPILE_CLI_OPTS=ON -DCOMPILE_HASH_TABLE=ON
+
       ;;
     "hash_table")
       BUILD_DIR+="hash_table"
+
+      cmake --preset release -DCOMPILE_HASH_TABLE=ON
       ;;
     *)
       echo "invalid library name (expected 'cli_opts' or 'hash_table')"
@@ -24,7 +29,6 @@ else
   esac
 fi
 
-cmake --preset release
 cmake --build --preset release --clean-first
 
 shopt -s nullglob

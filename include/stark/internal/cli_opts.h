@@ -147,10 +147,10 @@ STARK_COLD static void error(struct stark_cli_opts *const restrict opts,
 STARK_NOINLINE static bool
 run_subcommand(struct stark_cli_opts *const restrict opts,
                struct stark_cli_opt *const restrict opt) {
-  opts->_argc = 0;
+  int const argc = opts->_argc;
 
-  return stark_cli_opts_parse((struct stark_cli_opts *)opt->ctx, opts->_argc,
-                              opts->_argv);
+  return stark_cli_opts_parse((struct stark_cli_opts *)opt->ctx,
+                              (opts->_argc = 0, argc), opts->_argv);
 }
 
 STARK_COLD STARK_ALWAYS_INLINE static inline void

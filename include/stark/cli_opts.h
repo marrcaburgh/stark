@@ -284,7 +284,7 @@ stark_cli_opts_init_loop:
             "option missing destination pointer");
 
       ok = false;
-    } else if (opt->callback != NULL && opt->cb_tag == 0) {
+    } else if (opt->callback.callback != NULL && opt->cb_tag == 0) {
       error(NULL, 0, "stark_cli_opts_init",
             "assigners cannot be combined with callbacks");
 
