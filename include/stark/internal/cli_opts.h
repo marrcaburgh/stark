@@ -147,6 +147,8 @@ STARK_COLD static void error(struct stark_cli_opts *const restrict opts,
 STARK_NOINLINE static bool
 run_subcommand(struct stark_cli_opts *const restrict opts,
                struct stark_cli_opt *const restrict opt) {
+  opts->_argc = 0;
+
   return stark_cli_opts_parse((struct stark_cli_opts *)opt->ctx, opts->_argc,
                               opts->_argv);
 }
@@ -170,13 +172,7 @@ assign_opt(struct stark_cli_opts *const restrict opts,
 
       return true;
     } else if (opt->type == STARK_CLI_OPT_TYPE_SUBCOMMAND) {
-      if (STARK_EXPECT_FALSE(!run_subcommand(opts, opt))) {
-        return false;
-      }
-
-      opts->_argc = 0;
-
-      return true;
+      return run_subcommand(opts, opt);
     }
   }
 
@@ -242,9 +238,11 @@ assign_opt_carr:
   case STARK_CLI_OPT_TYPE_FLOAT64:
   case STARK_CLI_OPT_TYPE_FLOAT32:
     ot = "a decimal number";
+
     break;
   case STARK_CLI_OPT_TYPE_STRING:
     ot = "text";
+
     break;
   }
 
@@ -549,9 +547,11 @@ probe(struct stark_cli_opts *const restrict opts,
   for (; eq[0] != '=' && eq[0] != '\0'; eq++)
     ;
 
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
   if (STARK_EXPECT_FALSE(eq[0] == '\0' && type == LUT_TYPE_ENV)) {
     return NULL;
   }
+#endif
 
   size_t tkl;
   struct stark_hash_table_bucket *bkt =

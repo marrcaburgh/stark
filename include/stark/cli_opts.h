@@ -85,24 +85,24 @@ typedef enum stark_cli_opts_err {
 
 enum {
   /* regular types */
-  STARK_CLI_OPT_TYPE_BOOLEAN = 0,
-  STARK_CLI_OPT_TYPE_INT64 = 1,
-  STARK_CLI_OPT_TYPE_INT32 = 2,
-  STARK_CLI_OPT_TYPE_INT16 = 3,
-  STARK_CLI_OPT_TYPE_INT8 = 4,
-  STARK_CLI_OPT_TYPE_UINT64 = 5,
-  STARK_CLI_OPT_TYPE_UINT32 = 6,
-  STARK_CLI_OPT_TYPE_UINT16 = 7,
-  STARK_CLI_OPT_TYPE_UINT8 = 8,
-  STARK_CLI_OPT_TYPE_FLOAT64 = 9,
-  STARK_CLI_OPT_TYPE_FLOAT32 = 10,
-  STARK_CLI_OPT_TYPE_STRING = 11,
+  STARK_CLI_OPT_TYPE_BOOLEAN = 1,
+  STARK_CLI_OPT_TYPE_INT64 = 2,
+  STARK_CLI_OPT_TYPE_INT32 = 3,
+  STARK_CLI_OPT_TYPE_INT16 = 4,
+  STARK_CLI_OPT_TYPE_INT8 = 5,
+  STARK_CLI_OPT_TYPE_UINT64 = 6,
+  STARK_CLI_OPT_TYPE_UINT32 = 7,
+  STARK_CLI_OPT_TYPE_UINT16 = 8,
+  STARK_CLI_OPT_TYPE_UINT8 = 9,
+  STARK_CLI_OPT_TYPE_FLOAT64 = 10,
+  STARK_CLI_OPT_TYPE_FLOAT32 = 11,
+  STARK_CLI_OPT_TYPE_STRING = 12,
 
   /* special types */
-  STARK_CLI_OPT_TYPE_SUBCOMMAND = 12,
+  STARK_CLI_OPT_TYPE_SUBCOMMAND = 13,
 
   /* bltn types */
-  STARK_CLI_OPT_TYPE_HELP = 13,
+  STARK_CLI_OPT_TYPE_HELP = 14,
 };
 
 enum {
@@ -274,9 +274,19 @@ stark_cli_opts_init_loop:
   }
 
   if (opt->assign != NULL) {
-    if (opt->dest == NULL) {
+    if (opt->type != 0) {
+      error(NULL, 0, "stark_cli_opts_init",
+            "assigners cannot be combined with a type");
+
+      ok = false;
+    } else if (opt->dest == NULL) {
       error(NULL, 0, "stark_cli_opts_init",
             "option missing destination pointer");
+
+      ok = false;
+    } else if (opt->callback != NULL && opt->cb_tag == 0) {
+      error(NULL, 0, "stark_cli_opts_init",
+            "assigners cannot be combined with callbacks");
 
       ok = false;
     }
