@@ -21,14 +21,32 @@
       }
     },
     {
-      "name": "release",
+      "name": "release-base",
       "inherits": "base",
-      "displayName": "Release",
+      "displayName": "Base Release Configuration",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_FLAGS_RELEASE": "-g -gdwarf-4 -O3 -march=native -DNDEBUG"
       }
+    },
+    {
+      "name": "release-hash_table",
+      "inherits": "release-base",
+      "displayName": "Release - hash_table",
+      "cacheVariables": {
+        "COMPILE_HASH_TABLE": "ON"
+      }
+    },
+    {
+      "name": "release-cli_opts",
+      "inherits": "release-base",
+      "displayName": "Release - cli_opts",
+      "cacheVariables": {
+        "COMPILE_HASH_TABLE": "ON",
+        "COMPILE_CLI_OPTS": "ON"
+      }
     }
+
   ],
   "buildPresets": [
     {
@@ -36,23 +54,12 @@
       "configurePreset": "debug"
     },
     {
-      "name": "release",
-      "configurePreset": "release"
-    }
-  ],
-  "workflowPresets": [
+      "name": "release-cli_opts",
+      "configurePreset": "release-cli_opts"
+    },
     {
-      "name": "develop",
-      "steps": [
-        {
-          "type": "configure",
-          "name": "debug"
-        },
-        {
-          "type": "build",
-          "name": "debug"
-        }
-      ]
+      "name": "release-hash_table",
+      "configurePreset": "release-hash_table"
     }
   ]
 }
