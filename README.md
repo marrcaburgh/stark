@@ -10,9 +10,5 @@ A flexible and simple hash table
 # Build
 
 1. clone the repo `git clone https://github.com/marrcaburgh/stark.git`
-  
-2. run `cmake --preset release`
-  
-3. run `cmake --build --preset release`
 
 4. run `./source/tests/run_tests.sh <library>`
