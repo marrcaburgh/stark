@@ -40,6 +40,7 @@
 
 #define STARK_HASH_TABLE_DISABLE_ERROR_PRINTING
 #include "stark/internal/hash_table.h"
+#undef STARK_HASH_TABLE_DISABLE_ERROR_PRINTING
 
 #ifdef HASH_TABLE_RESTORE_HEAP
 #define STARK_HASH_TABLE_ENABLE_HEAP
@@ -62,15 +63,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LUT_TYPE_LH 0
-#define LUT_TYPE_PSC 1
-#define LUT_TYPE_ENV 2
+#define LUT_TYPE_LH (0)
+#define LUT_TYPE_PSC (1)
+#define LUT_TYPE_ENV (2)
 
-#define VALUE_TOKEN (1u << 0)
-#define LONG_OPT (1u << 1)
-#define POS_OPT (1u << 2)
-#define DIRTY (1u << 3)
-#define VERIFIED (1u << 4)
+#define FLAG_VALUE_TOKEN (1u << 0)
+#define FLAG_LONG_OPT (1u << 1)
+#define FLAG_POS_OPT (1u << 2)
 
 enum {
   NONE,
@@ -93,17 +92,17 @@ STARK_COLD static void error(struct stark_cli_opts *const restrict opts,
     switch (errc) {
     case STARK_CLI_OPTS_ERR_UNKNOWN_OPTION:
       fprintf(stderr, "unknown option: '%s%s'",
-              opts->_flags & POS_OPT    ? ""
-              : opts->_flags & LONG_OPT ? "--"
-                                        : "-",
+              opts->_flags & FLAG_POS_OPT    ? ""
+              : opts->_flags & FLAG_LONG_OPT ? "--"
+                                             : "-",
               err_ofmt);
 
       break;
     case STARK_CLI_OPTS_ERR_NO_VALUE:
       fprintf(stderr, "no value for option (expected: %s): '%s%s'", fname_octx,
-              opts->_flags & POS_OPT    ? ""
-              : opts->_flags & LONG_OPT ? "--"
-                                        : "-",
+              opts->_flags & FLAG_POS_OPT    ? ""
+              : opts->_flags & FLAG_LONG_OPT ? "--"
+                                             : "-",
               err_ofmt);
 
       break;
@@ -193,8 +192,8 @@ assign_opt_carr:
     goto assign_opt_skip_val;
   } else if (opt->mods & STARK_CLI_OPT_MOD_POSITIONAL) {
     goto assign_opt_skip_vfind_os;
-  } else if (opts->_flags & VALUE_TOKEN) {
-    opts->_flags &= ~VALUE_TOKEN;
+  } else if (opts->_flags & FLAG_VALUE_TOKEN) {
+    opts->_flags &= ~FLAG_VALUE_TOKEN;
 
     goto assign_opt_skip_vfind_os;
   } else if (opts->_argc > 1) {
@@ -318,7 +317,7 @@ assign_opt_skip_vfind_os:
 
   if ((opt->mods & STARK_CLI_OPT_MOD_ARRAY) && *endptr == opt->delim) {
     opts->_token = (delim = endptr) + 1;
-    opts->_flags |= VALUE_TOKEN;
+    opts->_flags |= FLAG_VALUE_TOKEN;
   } else if (STARK_EXPECT_FALSE(endptr == str) || *endptr != '\0') {
     error(opts, STARK_CLI_OPTS_ERR_NAN, NULL, str);
 
@@ -464,7 +463,7 @@ assign_opt_skip_val:
       }
 
       opts->_token = delim + 1;
-      opts->_flags |= VALUE_TOKEN;
+      opts->_flags |= FLAG_VALUE_TOKEN;
       delim = NULL;
 
       goto assign_opt_carr;
@@ -566,7 +565,7 @@ probe(struct stark_cli_opts *const restrict opts,
         opts->_token = eq + 1;
       }
     } else {
-      opts->_flags &= ~VALUE_TOKEN;
+      opts->_flags &= ~FLAG_VALUE_TOKEN;
     }
 
     ((struct stark_cli_opt *)bkt->val)->_fstate = LONGHAND;
@@ -577,4 +576,12 @@ probe(struct stark_cli_opts *const restrict opts,
   return NULL;
 }
 
+#ifndef STARK_INTERNAL_CLI_OPTS_DONT_UNDEF
+#undef LUT_TYPE_LH
+#undef LUT_TYPE_PSC
+#undef LUT_TYPE_ENV
+#undef FLAG_VALUE_TOKEN
+#undef FLAG_LONG_OPT
+#undef FLAG_POS_OPT
+#endif // STARK_INTERNAL_CLI_OPTS_DONT_UNDEF
 #endif // STARK_INTERNAL_CLI_OPTS_H

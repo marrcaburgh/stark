@@ -164,11 +164,17 @@ void stark_cli_opts_free_group_pools(struct stark_cli_opts *opts);
 
 #ifdef STARK_CLI_OPTS_IMPL
 
+#define STARK_INTERNAL_CLI_OPTS_DONT_UNDEF
 #include "stark/internal/cli_opts.h"
+#undef STARK_INTERNAL_CLI_OPTS_DONT_UNDEF
+
+#define FLAG_DIRTY (1u << 3)
+#define FLAG_INVALID (1u << 4)
+#define FLAG_VERIFIED (1u << 5)
 
 STARK_COLD bool
 stark_cli_opts_init(struct stark_cli_opts *const restrict opts) {
-  bool ok = true, vp = false;
+  bool valid = true, vp = false;
 
   if (opts == NULL) {
     error(NULL, 0, "stark_cli_opts_init", "cli_opts cannot be NULL");
@@ -182,7 +188,9 @@ stark_cli_opts_init(struct stark_cli_opts *const restrict opts) {
     error(NULL, 0, "stark_cli_opts_init", "optc must be greater than zero");
 
     return false;
-  } else if (opts->_flags & VERIFIED) {
+  } else if (opts->_flags & FLAG_INVALID) {
+    return false;
+  } else if (opts->_flags & FLAG_VERIFIED) {
     return true;
   }
 
@@ -242,7 +250,7 @@ stark_cli_opts_init_loop:
       error(NULL, 0, "stark_cli_opts_init",
             "array options must have an arrl that is greater than one");
 
-      ok = false;
+      valid = false;
     }
 
     switch (opt->delim) {
@@ -253,7 +261,7 @@ stark_cli_opts_init_loop:
         error(NULL, 0, "stark_cli_opts_init",
               "boolean options cannot have delimiters");
 
-        ok = false;
+        valid = false;
       }
       break;
     default:
@@ -266,7 +274,7 @@ stark_cli_opts_init_loop:
               "missing delimiter for array option (expected one of: ',', ':', "
               "';')");
 
-        ok = false;
+        valid = false;
       }
 
       break;
@@ -278,17 +286,17 @@ stark_cli_opts_init_loop:
       error(NULL, 0, "stark_cli_opts_init",
             "assigners cannot be combined with a type");
 
-      ok = false;
+      valid = false;
     } else if (opt->dest == NULL) {
       error(NULL, 0, "stark_cli_opts_init",
             "option missing destination pointer");
 
-      ok = false;
+      valid = false;
     } else if (opt->callback.callback != NULL && opt->cb_tag == 0) {
       error(NULL, 0, "stark_cli_opts_init",
             "assigners cannot be combined with callbacks");
 
-      ok = false;
+      valid = false;
     }
 
     goto stark_cli_opts_init_skip_bltn;
@@ -313,7 +321,7 @@ stark_cli_opts_init_loop:
       error(NULL, 0, "stark_cli_opts_init",
             "option missing destination pointer");
 
-      ok = false;
+      valid = false;
     }
 
     break;
@@ -322,7 +330,7 @@ stark_cli_opts_init_loop:
       error(NULL, 0, "stark_cli_opts_init",
             "subcommand option missing context");
 
-      ok = false;
+      valid = false;
     }
 
     break;
@@ -337,9 +345,9 @@ stark_cli_opts_init_skip_bltn:
         error(NULL, 0, "stark_cli_opts_init",
               "positional subcommand options must have a longhand");
 
-        ok = false;
+        valid = false;
       } else {
-        ok &= lut_insert(opt, &opts->_psc_lut, LUT_TYPE_PSC);
+        valid &= lut_insert(opt, &opts->_psc_lut, LUT_TYPE_PSC);
       }
 
       goto stark_cli_opts_init_skip_rpos;
@@ -348,7 +356,7 @@ stark_cli_opts_init_skip_bltn:
             "positional option modifier cannot be combined with boolean "
             "type");
 
-      ok = false;
+      valid = false;
     }
 
     if (opts->_posc == STARK_CLI_OPTS_POS_LUT_SIZE) {
@@ -359,13 +367,13 @@ stark_cli_opts_init_skip_bltn:
             "remove "
             "options");
 
-      ok = false;
+      valid = false;
     } else {
       if (vp) {
         error(NULL, 0, "stark_cli_opts_init",
               "variadic positional options must be the last positional");
 
-        ok = false;
+        valid = false;
       }
 
       vp = (opt->mods & STARK_CLI_OPT_MOD_ARRAY);
@@ -379,7 +387,7 @@ stark_cli_opts_init_skip_bltn:
           "non-positional options must have either a shorthand "
           "or longhand");
 
-    ok = false;
+    valid = false;
   }
 
   if (opt->shorthand == '\0') {
@@ -392,17 +400,25 @@ stark_cli_opts_init_skip_bltn:
     error(NULL, 0, "stark_cli_opts_init", "duplicate shorthand option '%c'",
           opt->shorthand);
 
-    ok = false;
+    valid = false;
   }
 
 stark_cli_opts_init_skip_sh:
   if (opt->longhand != NULL) {
-    ok &= lut_insert(opt, &opts->_lh_lut, LUT_TYPE_LH);
+    valid &= lut_insert(opt, &opts->_lh_lut, LUT_TYPE_LH);
   }
 
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   if (opt->env != NULL) {
-    ok &= lut_insert(opt, &opts->_env_lut, LUT_TYPE_ENV);
+    valid &= lut_insert(opt, &opts->_env_lut, LUT_TYPE_ENV);
+
+    if (opt->mods & STARK_CLI_OPT_MOD_REQUIRED &&
+        (opt->longhand != NULL || opt->shorthand != '\0')) {
+      error(NULL, 0, "stark_cli_opts_init",
+            "required options must be either environment or CLI");
+
+      valid = false;
+    }
   }
 #endif // STARK_CLI_OPTS_ENABLE_ENV
 
@@ -412,7 +428,9 @@ stark_cli_opts_init_skip_onc:
   goto stark_cli_opts_init_loop;
 
 stark_cli_opts_init_loope:
-  return opts->_flags |= (ok ? VERIFIED : 0);
+  opts->_flags |= (valid ? FLAG_VERIFIED : FLAG_INVALID);
+
+  return valid;
 }
 
 bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
@@ -429,7 +447,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
     error(NULL, 0, "stark_cli_opts_parse", "argc must be greater than zero");
 
     return false;
-  } else if (STARK_EXPECT_FALSE(!(opts->_flags & VERIFIED))) {
+  } else if (STARK_EXPECT_FALSE(!(opts->_flags & FLAG_VERIFIED))) {
     error(NULL, 0, "stark_cli_opts_parse",
           "not verified; did you forget "
           "'stark_cli_opts_init()'?");
@@ -437,7 +455,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
     return false;
   }
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-  else if (STARK_EXPECT_FALSE(((opts->_flags & DIRTY) &&
+  else if (STARK_EXPECT_FALSE(((opts->_flags & FLAG_DIRTY) &&
                                opts->_token_pool != NULL &&
                                opts->_token != NULL))) {
     error(NULL, 0, "stark_cli_opts_parse",
@@ -476,7 +494,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
   }
 
   opts->_token = opts->_token_pool;
-  opts->_flags |= DIRTY;
+  opts->_flags |= FLAG_DIRTY;
 
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   char **envp;
@@ -500,7 +518,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
     return false;
   }
 
-  for (; *envp != NULL; envp++, opts->_flags |= VALUE_TOKEN) {
+  for (; *envp != NULL; envp++, opts->_flags |= FLAG_VALUE_TOKEN) {
     strcpy(opts->_token, *envp);
 
     if (STARK_EXPECT_FALSE((opt = probe(opts, &opts->_env_lut, LUT_TYPE_ENV)) !=
@@ -518,9 +536,9 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
   bool eoo = false;
 
   for (opts->_argc = argc - 1, opts->_argv = argv + 1, opt = NULL,
-      opts->_flags |= VALUE_TOKEN;
-       opts->_argc > 0;
-       opts->_argc--, opts->_argv++, opt = NULL, opts->_flags |= VALUE_TOKEN) {
+      opts->_flags |= FLAG_VALUE_TOKEN;
+       opts->_argc > 0; opts->_argc--, opts->_argv++, opt = NULL,
+      opts->_flags |= FLAG_VALUE_TOKEN) {
     if (STARK_EXPECT_FALSE((*opts->_argv) == NULL ||
                            (*opts->_argv)[0] == '\0')) {
       continue;
@@ -544,7 +562,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
         opt->_fstate = POSITIONAL;
       }
 
-      opts->_flags |= POS_OPT;
+      opts->_flags |= FLAG_POS_OPT;
 
       if (STARK_EXPECT_FALSE(!assign_opt(opts, opt))) {
         return false;
@@ -557,7 +575,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       continue;
     }
 
-    opts->_flags &= ~POS_OPT;
+    opts->_flags &= ~FLAG_POS_OPT;
 
     if ((*opts->_argv)[1] == '-') {
       goto stark_cli_opts_parse_lh;
@@ -571,7 +589,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
     opts->_token = &(*opts->_argv)[1];
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-    while (opts->_flags & VALUE_TOKEN) {
+    while (opts->_flags & FLAG_VALUE_TOKEN) {
       if (STARK_EXPECT_FALSE(
               (opt = opts->_sh_lut[(unsigned char)opts->_token[0]]) == NULL)) {
         goto stark_cli_opts_parse_uopt;
@@ -580,11 +598,11 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       if ((mop = opts->_token[1] != '\0')) {
         opts->_token = opts->_token + 1;
       } else {
-        opts->_flags &= ~VALUE_TOKEN;
+        opts->_flags &= ~FLAG_VALUE_TOKEN;
       }
 
       opt->_fstate = SHORTHAND;
-      opts->_flags &= ~LONG_OPT;
+      opts->_flags &= ~FLAG_LONG_OPT;
 
       if (STARK_EXPECT_FALSE(!assign_opt(opts, opt))) {
         return false;
@@ -603,7 +621,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       continue;
     }
 
-    opts->_flags |= LONG_OPT;
+    opts->_flags |= FLAG_LONG_OPT;
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
     strcpy(opts->_token, &(*opts->_argv)[2]);
@@ -640,7 +658,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
             continue;
           }
 
-          char buf[UINT8_MAX * 2 + 28];
+          char buf[UINT8_MAX * 2 + 23];
           int off = 0;
 
           switch ((*oop)->_fstate) {
@@ -673,16 +691,17 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
         }
       }
     } else if (opt->mods & STARK_CLI_OPT_MOD_REQUIRED) {
-      char buf[UINT8_MAX + 7];
+      char buf[UINT8_MAX + 3];
 
       sprintf(buf,
-              (opt->mods & STARK_CLI_OPT_MOD_POSITIONAL) &&
-                      (opt->type == STARK_CLI_OPT_TYPE_SUBCOMMAND)
+              opt->env != NULL || ((opt->mods & STARK_CLI_OPT_MOD_POSITIONAL) &&
+                                   (opt->type == STARK_CLI_OPT_TYPE_SUBCOMMAND))
                   ? "%s"
               : opt->longhand != NULL ? "--%s"
                                       : "-%s",
-              opt->longhand != NULL ? opt->longhand
-                                    : (char[]){opt->shorthand, '\0'});
+              opt->env != NULL        ? opt->env
+              : opt->longhand != NULL ? opt->longhand
+                                      : (char[]){opt->shorthand, '\0'});
 
       error(opts, STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPTION, NULL, buf);
 
@@ -699,7 +718,7 @@ void stark_cli_opts_free_token_pool(
   free(opts->_token_pool);
   opts->_token_pool = NULL;
   opts->_token = NULL;
-  opts->_flags &= ~DIRTY;
+  opts->_flags &= ~FLAG_DIRTY;
 }
 
 void stark_cli_opts_free_group_pools(
@@ -711,6 +730,15 @@ void stark_cli_opts_free_group_pools(
 }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
+#undef LUT_TYPE_LH
+#undef LUT_TYPE_PSC
+#undef LUT_TYPE_ENV
+#undef FLAG_VALUE_TOKEN
+#undef FLAG_LONG_OPT
+#undef FLAG_POS_OPT
+#undef FLAG_DIRTY
+#undef FLAG_INVALID
+#undef FLAG_VERIFIED
 #endif // STARK_CLI_OPTS_IMPL
 
 #ifdef __cplusplus
