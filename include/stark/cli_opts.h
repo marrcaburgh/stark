@@ -476,6 +476,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
   }
 
   opts->_token = opts->_token_pool;
+  opts->_flags |= DIRTY;
 
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   char **envp;
@@ -534,7 +535,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       opt = !eoo ? probe(opts, &opts->_psc_lut, LUT_TYPE_PSC) : NULL;
 
       if (STARK_EXPECT_FALSE(opt == NULL)) {
-        if ((!eoo) & (pos_idx == opts->_posc)) {
+        if (pos_idx == opts->_posc) {
           goto stark_cli_opts_parse_uopt;
         } else {
           opt = opts->_pos_lut[pos_idx];
