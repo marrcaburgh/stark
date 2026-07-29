@@ -658,7 +658,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
             continue;
           }
 
-          char buf[UINT8_MAX * 2 + 23];
+          char buf[UINT8_MAX * 2 + 22];
           int off = 0;
 
           switch ((*oop)->_fstate) {
