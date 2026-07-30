@@ -2,7 +2,7 @@
 
 set -e
 
-BUILD_DIR="./build/release/source/tests/"
+BUILD_DIR="./build/release-$1/source/tests/$1"
 
 if [ "$#" -ne 1 ]; then
   echo "incorrect number of arguments"
@@ -11,14 +11,10 @@ if [ "$#" -ne 1 ]; then
 else
   case "$1" in
     "cli_opts")
-      BUILD_DIR+="cli_opts"
-
       cmake --preset release-cli_opts
       cmake --build --preset release-cli_opts
       ;;
     "hash_table")
-      BUILD_DIR+="hash_table"
-
       cmake --preset release-hash_table
       cmake --build --preset release-hash_table
       ;;

@@ -42,7 +42,6 @@
       "inherits": "release-base",
       "displayName": "Release - cli_opts",
       "cacheVariables": {
-        "COMPILE_HASH_TABLE": "ON",
         "COMPILE_CLI_OPTS": "ON"
       }
     }

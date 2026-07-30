@@ -737,8 +737,10 @@ void stark_cli_opts_free_token_pool(
 void stark_cli_opts_free_group_pools(
     struct stark_cli_opts *const restrict opts) {
   for (uint8_t i = 0; i < 63; i++) {
-    free(((size_t *)opts->_group_table[i]) - 1);
-    opts->_group_table[i] = NULL;
+    if (opts->_group_table[i] != NULL) {
+      free(((size_t *)opts->_group_table[i]) - 1);
+      opts->_group_table[i] = NULL;
+    }
   }
 }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
