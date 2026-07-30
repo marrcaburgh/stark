@@ -23,7 +23,7 @@
 
 //
 // Uncomment these to get syntax highlighting of the majority of the code in
-// this header, the default (stack) parts will still be grayed out:
+// this header; the default (stack) parts will still be grayed out:
 //
 // #define STARK_CLI_OPTS_ENABLE_ENV
 // #define STARK_CLI_OPTS_ENABLE_HEAP
@@ -60,7 +60,7 @@ extern "C" {
 // arrays, and the environment if environment variable parsing is enabled.
 //
 // Delimited string arrays can be used with heap allocation disabled, but
-// argv point to mutable strings otherwise this is undefined behavior.
+// argv must point to mutable strings; otherwise, this is undefined behavior.
 //
 #ifndef STARK_CLI_OPTS_LH_LUT_SIZE
 #define STARK_CLI_OPTS_LH_LUT_SIZE 64
