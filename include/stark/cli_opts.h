@@ -41,6 +41,8 @@
 extern "C" {
 #endif // __cplusplus
 
+#define STARK_CLI_OPTS_OPT_MAX (1258291u + UINT8_MAX)
+
 //
 // Define these macros before including this header or with your build system:
 //
@@ -150,7 +152,7 @@ typedef struct stark_cli_opts {
   char *_token_pool, *_token, **_argv;
   char const *const restrict desc;
   int _argc;
-  int const optc;
+  uint32_t const optc;
   uint8_t _flags;
   uint8_t _posc;
 } stark_cli_opts_t;
@@ -185,7 +187,12 @@ stark_cli_opts_init(struct stark_cli_opts *const restrict opts) {
 
     return false;
   } else if (opts->optc <= 0) {
-    error(NULL, 0, "stark_cli_opts_init", "optc must be greater than zero");
+    error(NULL, 0, "stark_cli_opts_init", "optc must be greater than 1");
+
+    return false;
+  } else if (opts->optc > STARK_CLI_OPTS_OPT_MAX) {
+    error(NULL, 0, "stark_cli_opts_init",
+          "optc cannot be greater than %" PRIu32, STARK_CLI_OPTS_OPT_MAX);
 
     return false;
   } else if (opts->_flags & FLAG_INVALID) {
@@ -213,7 +220,7 @@ stark_cli_opts_init(struct stark_cli_opts *const restrict opts) {
                                     .bkts = opts->_env_lut_bkts},
          sizeof(opts->_env_lut));
 
-  int li = 0;
+  uint32_t li = 0;
 stark_cli_opts_init_loop:
   if (li == opts->optc) {
     goto stark_cli_opts_init_loope;
@@ -223,32 +230,37 @@ stark_cli_opts_init_loop:
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
   if (opt->group != 0) {
-    size_t c = 1;
+    size_t count = 1;
 
-    c += opts->_group_table[opt->group - 1] != NULL
-             ? *((size_t *)opts->_group_table[opt->group - 1])
-             : 1;
+    if (opts->_group_table[opt->group - 1] == NULL) {
+      opts->_group_table[opt->group - 1] = malloc(
+          sizeof(size_t) + (STARK_CLI_OPTS_OPT_MAX + count++) * sizeof(void *));
 
-    struct stark_cli_opt **tp = realloc(opts->_group_table[opt->group - 1],
-                                        sizeof(size_t) + c * sizeof(void *));
+      if (opts->_group_table[opt->group - 1] == NULL) {
+        error(NULL, 0, "stark_cli_opts_init",
+              "allocation for group pool failed");
 
-    if (tp == NULL) {
-      error(NULL, 0, "stark_cli_opts_init",
-            "reallocation for group pool failed");
+        return false;
+      }
 
-      return false;
+      opts->_group_table[opt->group - 1] =
+          (struct stark_cli_opt **)(((size_t *)
+                                         opts->_group_table[opt->group - 1]) +
+                                    1);
+    } else {
+      count += *(((size_t *)opts->_group_table[opt->group - 1]) - 1);
     }
 
-    *((size_t *)(opts->_group_table[opt->group - 1] = tp)) = c;
-    opts->_group_table[opt->group - 1][c - 1] = opt;
-    opts->_group_table[opt->group - 1][c] = NULL;
+    *(((size_t *)opts->_group_table[opt->group - 1]) - 1) = count;
+    opts->_group_table[opt->group - 1][count - 1] = opt;
+    opts->_group_table[opt->group - 1][count] = NULL;
   }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
   if (opt->mods & STARK_CLI_OPT_MOD_ARRAY) {
     if (opt->arrl <= 1) {
       error(NULL, 0, "stark_cli_opts_init",
-            "array options must have an arrl that is greater than one");
+            "array options must have an arrl that is greater than 1");
 
       valid = false;
     }
@@ -282,17 +294,21 @@ stark_cli_opts_init_loop:
   }
 
   if (opt->assign != NULL) {
+    if (opt->dest == NULL) {
+      error(NULL, 0, "stark_cli_opts_init",
+            "option missing destination pointer");
+
+      valid = false;
+    }
+
     if (opt->type != 0) {
       error(NULL, 0, "stark_cli_opts_init",
             "assigners cannot be combined with a type");
 
       valid = false;
-    } else if (opt->dest == NULL) {
-      error(NULL, 0, "stark_cli_opts_init",
-            "option missing destination pointer");
+    }
 
-      valid = false;
-    } else if (opt->callback.callback != NULL && opt->cb_tag == 0) {
+    if (opt->callback.callback != NULL && opt->cb_tag == 0) {
       error(NULL, 0, "stark_cli_opts_init",
             "assigners cannot be combined with callbacks");
 
@@ -415,7 +431,7 @@ stark_cli_opts_init_skip_sh:
     if (opt->mods & STARK_CLI_OPT_MOD_REQUIRED &&
         (opt->longhand != NULL || opt->shorthand != '\0')) {
       error(NULL, 0, "stark_cli_opts_init",
-            "required options must be either environment or CLI");
+            "required options cannot have both env and longhand/shorthand");
 
       valid = false;
     }
@@ -444,7 +460,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
     return false;
   } else if (STARK_EXPECT_FALSE(argc <= 0)) {
-    error(NULL, 0, "stark_cli_opts_parse", "argc must be greater than zero");
+    error(NULL, 0, "stark_cli_opts_parse", "argc must be greater than 1");
 
     return false;
   } else if (STARK_EXPECT_FALSE(!(opts->_flags & FLAG_VERIFIED))) {
@@ -468,7 +484,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
   struct stark_cli_opt *opt;
 
-  for (int i = 0; i < opts->optc; i++) {
+  for (uint32_t i = 0; i < opts->optc; i++) {
     opt = &opts->optv[i];
     opt->_fstate = NONE;
     opt->arrc = 0;
@@ -646,13 +662,12 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
     return false;
   }
 
-  for (int i = 0; i < opts->optc; i++) {
+  for (uint32_t i = 0; i < opts->optc; i++) {
     opt = &opts->optv[i];
 
     if (opt->_fstate != NONE) {
       if (opt->group != 0) {
-        for (struct stark_cli_opt **oop =
-                 &opts->_group_table[opt->group - 1][1];
+        for (struct stark_cli_opt **oop = opts->_group_table[opt->group - 1];
              *oop != NULL; oop++) {
           if (*oop == opt) {
             continue;
@@ -723,8 +738,8 @@ void stark_cli_opts_free_token_pool(
 
 void stark_cli_opts_free_group_pools(
     struct stark_cli_opts *const restrict opts) {
-  for (int i = 0; i < 63; i++) {
-    free(opts->_group_table[i]);
+  for (uint8_t i = 0; i < 63; i++) {
+    free(((size_t *)opts->_group_table[i]) - 1);
     opts->_group_table[i] = NULL;
   }
 }

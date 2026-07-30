@@ -55,6 +55,7 @@
 #include <linux/limits.h>
 #endif // __linux__
 
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -294,7 +295,7 @@ assign_opt_skip_vfind_os:
     goto assign_opt_skip_bltn_os;
   }
 
-  char *endptr = NULL, rs[52];
+  char *endptr = NULL, rs[48];
   union {
     int64_t i;
     uint64_t ui;
@@ -327,7 +328,7 @@ assign_opt_skip_vfind_os:
   switch (opt->type) {
   case STARK_CLI_OPT_TYPE_INT64:
     if (STARK_EXPECT_FALSE(errno == ERANGE)) {
-      sprintf(rs, "'%ld' to '%ld'", INT64_MIN, INT64_MAX);
+      sprintf(rs, "'%" PRId64 "' to '%" PRId64 "'", INT64_MIN, INT64_MAX);
 
       break;
     }
@@ -339,7 +340,7 @@ assign_opt_skip_vfind_os:
   case STARK_CLI_OPT_TYPE_INT32:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.i > INT32_MAX ||
                            val.i < INT32_MIN)) {
-      sprintf(rs, "'%d' to '%d'", INT32_MIN, INT32_MAX);
+      sprintf(rs, "'%" PRId32 "' to '%" PRId32 "'", INT32_MIN, INT32_MAX);
 
       break;
     }
@@ -351,7 +352,7 @@ assign_opt_skip_vfind_os:
   case STARK_CLI_OPT_TYPE_INT16:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.i > INT16_MAX ||
                            val.i < INT16_MIN)) {
-      sprintf(rs, "'%hd' to '%hd'", INT16_MIN, INT16_MAX);
+      sprintf(rs, "'%" PRId16 "' to '%" PRId16 "'", INT16_MIN, INT16_MAX);
 
       break;
     }
@@ -363,7 +364,7 @@ assign_opt_skip_vfind_os:
   case STARK_CLI_OPT_TYPE_INT8:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.i > INT8_MAX ||
                            val.i < INT8_MIN)) {
-      sprintf(rs, "'%hhd' to '%hhd'", INT8_MIN, INT8_MAX);
+      sprintf(rs, "'%" PRId8 "' to '%" PRId8 "'", INT8_MIN, INT8_MAX);
 
       break;
     }
@@ -377,7 +378,7 @@ assign_opt_skip_vfind_os:
       ;
 
     if (STARK_EXPECT_FALSE(errno == ERANGE || rcp[0] == '-')) {
-      sprintf(rs, "'%lu' to '%lu'", 0UL, UINT64_MAX);
+      sprintf(rs, "'%" PRIu64 "' to '%" PRIu64 "'", UINT64_C(0), UINT64_MAX);
 
       break;
     }
@@ -388,7 +389,7 @@ assign_opt_skip_vfind_os:
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_UINT32:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.ui > UINT32_MAX)) {
-      sprintf(rs, "'%u' to '%u'", 0, UINT32_MAX);
+      sprintf(rs, "'%" PRIu32 "' to '%" PRIu32 "'", UINT32_C(0), UINT32_MAX);
 
       break;
     }
@@ -399,7 +400,7 @@ assign_opt_skip_vfind_os:
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_UINT16:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.ui > UINT16_MAX)) {
-      sprintf(rs, "'%hu' to '%hu'", 0, UINT16_MAX);
+      sprintf(rs, "'%" PRIu16 "' to '%" PRIu16 "'", UINT16_C(0), UINT16_MAX);
 
       break;
     }
@@ -410,7 +411,7 @@ assign_opt_skip_vfind_os:
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_UINT8:
     if (STARK_EXPECT_FALSE(errno == ERANGE || val.ui > UINT8_MAX)) {
-      sprintf(rs, "'%hhu' to '%hhu'", 0, UINT8_MAX);
+      sprintf(rs, "'%" PRIu8 "' to '%" PRIu8 "'", UINT8_C(0), UINT8_MAX);
 
       break;
     }
