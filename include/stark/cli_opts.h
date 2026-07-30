@@ -166,9 +166,7 @@ void stark_cli_opts_free_group_pools(struct stark_cli_opts *opts);
 
 #ifdef STARK_CLI_OPTS_IMPL
 
-#define STARK_INTERNAL_CLI_OPTS_DONT_UNDEF
 #include "stark/internal/cli_opts.h"
-#undef STARK_INTERNAL_CLI_OPTS_DONT_UNDEF
 
 #define FLAG_DIRTY (1u << 3)
 #define FLAG_INVALID (1u << 4)
@@ -745,15 +743,9 @@ void stark_cli_opts_free_group_pools(
 }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-#undef LUT_TYPE_LH
-#undef LUT_TYPE_PSC
-#undef LUT_TYPE_ENV
-#undef FLAG_VALUE_TOKEN
-#undef FLAG_LONG_OPT
-#undef FLAG_POS_OPT
-#undef FLAG_DIRTY
-#undef FLAG_INVALID
-#undef FLAG_VERIFIED
+#define INTERNAL_CLI_OPTS_UNDEF
+#include "stark/internal/cli_opts.h"
+#undef INTERNAL_CLI_OPTS_UNDEF
 #endif // STARK_CLI_OPTS_IMPL
 
 #ifdef __cplusplus

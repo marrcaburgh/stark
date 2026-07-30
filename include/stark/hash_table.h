@@ -169,6 +169,10 @@ void stark_hash_table_free_buckets(
 }
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
+#define INTERNAL_HASH_TABLE_UNDEF
+#include "stark/internal/hash_table.h"
+#undef INTERNAL_HASH_TABLE_UNDEF
+
 #endif // STARK_HASH_TABLE_IMPL
 
 #ifdef __cplusplus
