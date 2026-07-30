@@ -746,6 +746,9 @@ void stark_cli_opts_free_group_pools(
 #define INTERNAL_CLI_OPTS_UNDEF
 #include "stark/internal/cli_opts.h"
 #undef INTERNAL_CLI_OPTS_UNDEF
+#undef FLAG_DIRTY
+#undef FLAG_INVALID
+#undef FLAG_VERIFIED
 #endif // STARK_CLI_OPTS_IMPL
 
 #ifdef __cplusplus
