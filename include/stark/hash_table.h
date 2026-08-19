@@ -29,15 +29,15 @@
 // developer-facing errors. You can still use rcp to get a return code.
 //
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-#include "core.h"
+#include "stark/core.h"
 
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 typedef enum stark_hash_table_err {
   STARK_HASH_TABLE_ERR_NULL,

@@ -17,20 +17,6 @@
 // #define STARK_CLI_OPTS_ENABLE_HEAP
 // #define STARK_CLI_OPTS_IMPL
 //
-
-#include "stark/core.h"
-#include "stark/hash_table.h"
-
-#include <inttypes.h>
-#include <stdbool.h>
-#include <stdint.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-#define STARK_CLI_OPTS_OPT_MAX (1258291u + UINT8_MAX)
-
 //
 // Define these macros before including this header or with your build system:
 //
@@ -62,6 +48,19 @@ extern "C" {
 #ifndef STARK_CLI_OPTS_ENV_LUT_SIZE
 #define STARK_CLI_OPTS_ENV_LUT_SIZE 16
 #endif // STARK_CLI_OPTS_ENV_LUT_SIZE
+
+#define STARK_CLI_OPTS_OPT_MAX (1258291u + UINT8_MAX)
+
+#include "stark/core.h"
+#include "stark/hash_table.h"
+
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 typedef enum stark_cli_opts_err {
   STARK_CLI_OPTS_ERR_UNKNOWN_OPTION = 1,
@@ -154,11 +153,11 @@ void stark_cli_opts_free_group_pools(struct stark_cli_opts *opts);
 
 #ifdef STARK_CLI_OPTS_IMPL
 
-#include "stark/internal/cli_opts.h"
-
 #define FLAG_DIRTY (1u << 3)
 #define FLAG_INVALID (1u << 4)
 #define FLAG_VERIFIED (1u << 5)
+
+#include "stark/internal/cli_opts.h"
 
 STARK_COLD bool
 stark_cli_opts_init(struct stark_cli_opts *const restrict opts) {
@@ -220,7 +219,7 @@ stark_cli_opts_init_loop:
 
     if (opts->_group_table[opt->group - 1] == NULL) {
       opts->_group_table[opt->group - 1] = malloc(
-          sizeof(size_t) + (STARK_CLI_OPTS_OPT_MAX + count++) * sizeof(void *));
+          sizeof(size_t) + (STARK_CLI_OPTS_OPT_MAX + count) * sizeof(void *));
 
       if (opts->_group_table[opt->group - 1] == NULL) {
         error(NULL, 0, "stark_cli_opts_init",
@@ -239,7 +238,6 @@ stark_cli_opts_init_loop:
 
     *(((size_t *)opts->_group_table[opt->group - 1]) - 1) = count;
     opts->_group_table[opt->group - 1][count - 1] = opt;
-    opts->_group_table[opt->group - 1][count] = NULL;
   }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
@@ -653,26 +651,29 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
     if (opt->_fstate != NONE) {
       if (opt->group != 0) {
-        for (struct stark_cli_opt **oop = opts->_group_table[opt->group - 1];
-             *oop != NULL; oop++) {
-          if (*oop == opt) {
+        for (size_t i = 0;
+             i < *(((size_t *)opts->_group_table[opt->group - 1]) - 1); i++) {
+          if (opts->_group_table[opt->group - 1][i] == opt) {
             continue;
           }
 
           char buf[UINT8_MAX * 2 + 22];
           int off = 0;
 
-          switch ((*oop)->_fstate) {
+          switch (opts->_group_table[opt->group - 1][i]->_fstate) {
           case NONE:
             continue;
           case SHORTHAND:
-            off = sprintf(buf, "'-%c' with option '-", (*oop)->shorthand);
+            off = sprintf(buf, "'-%c' with option '-",
+                          opts->_group_table[opt->group - 1][i]->shorthand);
             break;
           case LONGHAND:
-            off = sprintf(buf, "'--%s' with option '--", (*oop)->longhand);
+            off = sprintf(buf, "'--%s' with option '--",
+                          opts->_group_table[opt->group - 1][i]->longhand);
             break;
           case POSITIONAL:
-            off = sprintf(buf, "'%s' with option '", (*oop)->longhand);
+            off = sprintf(buf, "'%s' with option '",
+                          opts->_group_table[opt->group - 1][i]->longhand);
             break;
           }
 

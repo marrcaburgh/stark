@@ -41,6 +41,14 @@
 #endif // DEF_SHTEH
 #endif // STARK_HASH_TABLE_IMPL
 
+#define LUT_TYPE_LH (0)
+#define LUT_TYPE_PSC (1)
+#define LUT_TYPE_ENV (2)
+
+#define FLAG_VALUE_TOKEN (1u << 0)
+#define FLAG_LONG_OPT (1u << 1)
+#define FLAG_POS_OPT (1u << 2)
+
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
@@ -56,14 +64,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define LUT_TYPE_LH (0)
-#define LUT_TYPE_PSC (1)
-#define LUT_TYPE_ENV (2)
-
-#define FLAG_VALUE_TOKEN (1u << 0)
-#define FLAG_LONG_OPT (1u << 1)
-#define FLAG_POS_OPT (1u << 2)
 
 enum {
   NONE,
@@ -573,6 +573,9 @@ probe(struct stark_cli_opts *const restrict opts,
 #endif // STARK_INTERNAL_CLI_OPTS_H
 
 #ifdef INTERNAL_CLI_OPTS_UNDEF
+#define INTERNAL_HASH_TABLE_UNDEF
+#include "stark/internal/hash_table.h"
+#undef INTERNAL_HASH_TABLE_UNDEF
 #undef LUT_TYPE_LH
 #undef LUT_TYPE_PSC
 #undef LUT_TYPE_ENV

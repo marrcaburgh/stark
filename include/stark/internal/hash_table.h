@@ -16,15 +16,15 @@
 // #define STARK_HASH_TABLE_ENABLE_HEAP
 //
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #define HASH_TABLE_RETURN_DUPLICATE (1u << 0)
 #define HASH_TABLE_MODE_EXTRACT (1u << 1)
 #define HASH_TABLE_MODE_BINARY (1u << 2)
 #define HASH_TABLE_MODE_RESIZE (1u << 3)
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 STARK_COLD static void hash_table_error(enum stark_hash_table_err errc,
                                         enum stark_hash_table_err *rcp,

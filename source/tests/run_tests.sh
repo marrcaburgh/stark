@@ -2,7 +2,6 @@
 
 set -e
 
-BUILD_DIR="./build/release-$1/source/tests/$1"
 
 if [ "$#" -ne 1 ]; then
   echo "incorrect number of arguments"
@@ -24,6 +23,8 @@ else
       exit 13
       ;;
   esac
+
+  BUILD_DIR="./build/release-$1/source/tests/$1"
 fi
 
 shopt -s nullglob

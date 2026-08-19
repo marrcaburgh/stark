@@ -17,7 +17,9 @@
       "displayName": "Debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -pedantic"
+        "CMAKE_C_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -pedantic",
+        "COMPILE_HASH_TABLE": "ON",
+        "COMPILE_CLI_OPTS": "ON"
       }
     },
     {
