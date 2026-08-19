@@ -173,7 +173,7 @@ stark_cli_opts_init(struct stark_cli_opts *const restrict opts) {
 
     return false;
   } else if (opts->optc <= 0) {
-    error(NULL, 0, "stark_cli_opts_init", "optc must be greater than 1");
+    error(NULL, 0, "stark_cli_opts_init", "optc must be greater than 0");
 
     return false;
   } else if (opts->optc > STARK_CLI_OPTS_OPT_MAX) {
@@ -446,7 +446,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
     return false;
   } else if (STARK_EXPECT_FALSE(argc <= 0)) {
-    error(NULL, 0, "stark_cli_opts_parse", "argc must be greater than 1");
+    error(NULL, 0, "stark_cli_opts_parse", "argc must be greater than 0");
 
     return false;
   } else if (STARK_EXPECT_FALSE(!(opts->_flags & FLAG_VERIFIED))) {
