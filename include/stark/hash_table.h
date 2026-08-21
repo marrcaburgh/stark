@@ -159,7 +159,6 @@ void stark_hash_table_free_buckets(
 
 #define INTERNAL_HASH_TABLE_UNDEF
 #include "stark/internal/hash_table.h"
-#undef INTERNAL_HASH_TABLE_UNDEF
 
 #endif // STARK_HASH_TABLE_IMPL
 

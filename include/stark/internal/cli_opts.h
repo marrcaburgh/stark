@@ -3,7 +3,7 @@
 //
 // stark - a C99+ utility library - stark_cli_opts - a blazing-fast feature-full
 // command-line parser
-// Copyright (C) 2026 marrcaburgh
+// Copyright (C) 2026 marr_countaburgh
 //
 
 #ifndef STARK_INTERNAL_CLI_OPTS_H
@@ -174,14 +174,14 @@ assign_opt(struct stark_cli_opts *const restrict opts,
 
 assign_opt_carr:
   if (STARK_EXPECT_FALSE(opt->mods & STARK_CLI_OPT_MOD_ARRAY &&
-                         !(opt->arrc < opt->arrl))) {
+                         !(opt->arr_count < opt->arr_len))) {
     error(opts, STARK_CLI_OPTS_ERR_OOB, NULL, opts->_token);
 
     return false;
   }
 
   if (opt->type == STARK_CLI_OPT_TYPE_BOOLEAN) {
-    ((bool *)opt->dest)[opt->arrc] = true;
+    ((bool *)opt->dest)[opt->arr_count] = true;
 
     goto assign_opt_skip_val;
   } else if (opt->mods & STARK_CLI_OPT_MOD_POSITIONAL) {
@@ -237,6 +237,10 @@ assign_opt_carr:
     ot = "text";
 
     break;
+  default:
+    ot = "";
+
+    break;
   }
 
   error(opts, STARK_CLI_OPTS_ERR_NO_VALUE, ot, opts->_token);
@@ -247,7 +251,7 @@ assign_opt_skip_vfind_os:
   str = opts->_token;
 
   if (opt->assign != NULL) {
-    if (STARK_EXPECT_FALSE(!opt->assign(str, opt->dest, opt->arrc, &vp))) {
+    if (STARK_EXPECT_FALSE(!opt->assign(str, opt->dest, opt->arr_count, &vp))) {
       return false;
     }
 
@@ -278,8 +282,8 @@ assign_opt_skip_vfind_os:
       }
     }
 
-    ((char const **)opt->dest)[opt->arrc] = str;
-    vp = &((char const **)opt->dest)[opt->arrc];
+    ((char const **)opt->dest)[opt->arr_count] = str;
+    vp = &((char const **)opt->dest)[opt->arr_count];
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
     opts->_token = strchr(str, '\0') + 1;
@@ -326,8 +330,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((int64_t *)opt->dest)[opt->arrc] = val.i;
-    vp = &((int64_t *)opt->dest)[opt->arrc];
+    ((int64_t *)opt->dest)[opt->arr_count] = val.i;
+    vp = &((int64_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_INT32:
@@ -338,8 +342,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((int32_t *)opt->dest)[opt->arrc] = (int32_t)val.i;
-    vp = &((int32_t *)opt->dest)[opt->arrc];
+    ((int32_t *)opt->dest)[opt->arr_count] = (int32_t)val.i;
+    vp = &((int32_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_INT16:
@@ -350,8 +354,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((int16_t *)opt->dest)[opt->arrc] = (int16_t)val.i;
-    vp = &((int16_t *)opt->dest)[opt->arrc];
+    ((int16_t *)opt->dest)[opt->arr_count] = (int16_t)val.i;
+    vp = &((int16_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_INT8:
@@ -362,8 +366,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((int8_t *)opt->dest)[opt->arrc] = (int8_t)val.i;
-    vp = &((int8_t *)opt->dest)[opt->arrc];
+    ((int8_t *)opt->dest)[opt->arr_count] = (int8_t)val.i;
+    vp = &((int8_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_UINT64:
@@ -376,8 +380,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((uint64_t *)opt->dest)[opt->arrc] = val.ui;
-    vp = &((uint64_t *)opt->dest)[opt->arrc];
+    ((uint64_t *)opt->dest)[opt->arr_count] = val.ui;
+    vp = &((uint64_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_UINT32:
@@ -387,8 +391,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((uint32_t *)opt->dest)[opt->arrc] = (uint32_t)val.ui;
-    vp = &((uint32_t *)opt->dest)[opt->arrc];
+    ((uint32_t *)opt->dest)[opt->arr_count] = (uint32_t)val.ui;
+    vp = &((uint32_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_UINT16:
@@ -398,8 +402,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((uint16_t *)opt->dest)[opt->arrc] = (uint16_t)val.ui;
-    vp = &((uint16_t *)opt->dest)[opt->arrc];
+    ((uint16_t *)opt->dest)[opt->arr_count] = (uint16_t)val.ui;
+    vp = &((uint16_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_UINT8:
@@ -409,8 +413,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((uint8_t *)opt->dest)[opt->arrc] = (uint8_t)val.ui;
-    vp = &((uint8_t *)opt->dest)[opt->arrc];
+    ((uint8_t *)opt->dest)[opt->arr_count] = (uint8_t)val.ui;
+    vp = &((uint8_t *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_FLOAT64:
@@ -420,8 +424,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((double *)opt->dest)[opt->arrc] = val.d;
-    vp = &((double *)opt->dest)[opt->arrc];
+    ((double *)opt->dest)[opt->arr_count] = val.d;
+    vp = &((double *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   case STARK_CLI_OPT_TYPE_FLOAT32:
@@ -431,8 +435,8 @@ assign_opt_skip_vfind_os:
       break;
     }
 
-    ((float *)opt->dest)[opt->arrc] = val.f;
-    vp = &((float *)opt->dest)[opt->arrc];
+    ((float *)opt->dest)[opt->arr_count] = val.f;
+    vp = &((float *)opt->dest)[opt->arr_count];
 
     goto assign_opt_skip_bltn_os;
   }
@@ -449,7 +453,7 @@ assign_opt_skip_bltn_os:
 
 assign_opt_skip_val:
   if (opt->mods & STARK_CLI_OPT_MOD_ARRAY) {
-    opt->arrc++;
+    opt->arr_count++;
 
     if (delim != NULL) {
       if (opt->type == STARK_CLI_OPT_TYPE_STRING) {
@@ -582,4 +586,5 @@ probe(struct stark_cli_opts *const restrict opts,
 #undef FLAG_VALUE_TOKEN
 #undef FLAG_LONG_OPT
 #undef FLAG_POS_OPT
+#undef INTERNAL_CLI_OPTS_UNDEF
 #endif // INTERNAL_CLI_OPTS_UNDEF

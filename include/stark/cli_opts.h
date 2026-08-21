@@ -3,7 +3,7 @@
 //
 // stark - a C99+ utility library - stark_cli_opts - a blazing-fast feature-full
 // command-line parser
-// Copyright (C) 2026 marrcaburgh
+// Copyright (C) 2026 marr_countaburgh
 //
 
 #ifndef STARK_CLI_OPTS_H
@@ -107,8 +107,8 @@ typedef struct STARK_ALIGNED(64) stark_cli_opt {
   uint8_t group : 5;
   uint8_t cb_tag : 1;
   uint8_t _fstate : 2;
-  uint8_t arrc;
-  uint8_t const arrl;
+  uint8_t arr_count;
+  uint8_t const arr_len;
   char const delim;
   unsigned char const shorthand;
   uint8_t pad[2];
@@ -116,7 +116,7 @@ typedef struct STARK_ALIGNED(64) stark_cli_opt {
   char const *const restrict env;
   void *const restrict dest;
   bool (*const assign)(char const *const restrict str,
-                       void *const restrict dest, uint8_t const arrc,
+                       void *const restrict dest, uint8_t const arr_count,
                        void *restrict *const restrict vpp);
   const union {
     void (*const callback)(const void *const restrict ctx);
@@ -242,9 +242,9 @@ stark_cli_opts_init_loop:
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
   if (opt->mods & STARK_CLI_OPT_MOD_ARRAY) {
-    if (opt->arrl <= 1) {
+    if (opt->arr_len <= 1) {
       error(NULL, 0, "stark_cli_opts_init",
-            "array options must have an arrl that is greater than 1");
+            "array options must have an arr_len that is greater than 1");
 
       valid = false;
     }
@@ -471,7 +471,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
   for (uint32_t i = 0; i < opts->optc; i++) {
     opt = &opts->optv[i];
     opt->_fstate = NONE;
-    opt->arrc = 0;
+    opt->arr_count = 0;
   }
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
@@ -568,7 +568,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
         return false;
       }
 
-      if (opt->arrc == opt->arrl) {
+      if (opt->arr_count == opt->arr_len) {
         pos_idx++;
       }
 
@@ -734,12 +734,11 @@ void stark_cli_opts_free_group_pools(
 }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-#define INTERNAL_CLI_OPTS_UNDEF
-#include "stark/internal/cli_opts.h"
-#undef INTERNAL_CLI_OPTS_UNDEF
 #undef FLAG_DIRTY
 #undef FLAG_INVALID
 #undef FLAG_VERIFIED
+#define INTERNAL_CLI_OPTS_UNDEF
+#include "stark/internal/cli_opts.h"
 #endif // STARK_CLI_OPTS_IMPL
 
 #ifdef __cplusplus

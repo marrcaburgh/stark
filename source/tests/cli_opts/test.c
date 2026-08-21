@@ -66,7 +66,7 @@ struct stark_cli_opt optv[] = {
      .mods = STARK_CLI_OPT_MOD_ARRAY,
      .longhand = "ba",
      .dest = ba,
-     .arrl = sizeof(ba) / sizeof(ba[0])},
+     .arr_len = sizeof(ba) / sizeof(ba[0])},
 
     {.type = STARK_CLI_OPT_TYPE_INT64,
      .shorthand = 'u',
@@ -87,7 +87,7 @@ struct stark_cli_opt optv[] = {
      .mods = STARK_CLI_OPT_MOD_ARRAY,
      .longhand = "i64a",
      .dest = i64a,
-     .arrl = sizeof(i64a) / sizeof(i64a[0]),
+     .arr_len = sizeof(i64a) / sizeof(i64a[0]),
      .delim = ','},
 
     {.type = STARK_CLI_OPT_TYPE_FLOAT64,
@@ -118,7 +118,7 @@ struct stark_cli_opt optv[] = {
      .mods = STARK_CLI_OPT_MOD_ARRAY,
      .longhand = "f64a",
      .dest = f64a,
-     .arrl = sizeof(f64a) / sizeof(f64a[0]),
+     .arr_len = sizeof(f64a) / sizeof(f64a[0]),
      .delim = ','},
 
     {.type = STARK_CLI_OPT_TYPE_STRING,
@@ -149,7 +149,7 @@ struct stark_cli_opt optv[] = {
      .mods = STARK_CLI_OPT_MOD_ARRAY,
      .longhand = "stra",
      .dest = stra,
-     .arrl = sizeof(stra) / sizeof(stra[0]),
+     .arr_len = sizeof(stra) / sizeof(stra[0]),
      .delim = ','},
 
     {.type = STARK_CLI_OPT_TYPE_SUBCOMMAND,

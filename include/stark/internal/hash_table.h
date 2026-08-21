@@ -328,4 +328,5 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
 #undef HASH_TABLE_MODE_EXTRACT
 #undef HASH_TABLE_MODE_BINARY
 #undef HASH_TABLE_MODE_RESIZE
+#undef INTERNAL_HASH_TABLE_UNDEF
 #endif // INTERNAL_HASH_TABLE_UNDEF
