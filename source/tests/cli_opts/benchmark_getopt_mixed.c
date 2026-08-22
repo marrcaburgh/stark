@@ -17,7 +17,7 @@ int main(void) {
                                      {"b", required_argument, 0, 'b'},
                                      {0, 0, 0, 0}};
 
-  for (int i = 0; i < 100000000; i++) {
+  for (int i = 0; i < 10000000; i++) {
     char *const argv[] = {"benchmark_getopt",
                           "-q",
                           "-w",

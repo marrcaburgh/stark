@@ -6,15 +6,11 @@ int main(void) {
   struct stark_cli_opts cli_opts = {
       .desc = "benchmark-shorthand-same test", .optc = optc, .optv = optv};
 
-  if (!stark_cli_opts_init(&cli_opts)) {
-    return 1;
-  }
-
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   init_env(false);
 #endif
 
-  for (int i = 0; i < 100000000; i++) {
+  for (int i = 0; i < 10000000; i++) {
     char *argv[] = {"benchmark-shorthand-same",
                     "-q",
                     "-w",
@@ -35,7 +31,7 @@ int main(void) {
     }
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-    stark_cli_opts_free_token_pool(&cli_opts);
+    stark_cli_opts_free_token_pools(&cli_opts);
 #endif
   }
 

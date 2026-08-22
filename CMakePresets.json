@@ -17,7 +17,7 @@
       "displayName": "Debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -pedantic",
+        "CMAKE_C_FLAGS_DEBUG": "-g -gdwarf-4 -O0 -Wall -Wextra -pedantic -fsanitize=address,undefined -fno-omit-frame-pointer",
         "COMPILE_HASH_TABLE": "ON",
         "COMPILE_CLI_OPTS": "ON"
       }
@@ -28,7 +28,7 @@
       "displayName": "Base Release Configuration",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_C_FLAGS_RELEASE": "-g -gdwarf-4 -O3 -march=native -DNDEBUG"
+        "CMAKE_C_FLAGS_RELEASE": "-O3 -march=native -DNDEBUG"
       }
     },
     {

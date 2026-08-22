@@ -10,14 +10,6 @@ int main(int argc, char *argv[]) {
   init_env(true);
 #endif
 
-  if (!stark_cli_opts_init(&cli_opts)) {
-    return 1;
-  }
-
-  if (!stark_cli_opts_init(&subcommand)) {
-    return 2;
-  }
-
   if (!stark_cli_opts_parse(&cli_opts, argc, argv)) {
     return 3;
   }
@@ -26,10 +18,8 @@ int main(int argc, char *argv[]) {
   print_longhand();
   print_array();
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-  stark_cli_opts_free_token_pool(&cli_opts);
-  stark_cli_opts_free_token_pool(&subcommand);
+  stark_cli_opts_free_token_pools(&cli_opts);
   stark_cli_opts_free_group_pools(&cli_opts);
-  stark_cli_opts_free_group_pools(&subcommand);
 #endif
 
   return 0;
