@@ -2,13 +2,16 @@
 #include "test.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 void init_env(bool lh) {
   if (lh) {
+    putenv("Y=");
     putenv("S=3");
     putenv("K=3.0");
     putenv("B=String3");
   } else {
+    putenv("E=");
     putenv("O=3");
     putenv("G=3.0");
     putenv("X=String3");
@@ -58,10 +61,10 @@ struct stark_cli_opt optv[] = {
 
     {.type = STARK_CLI_OPT_TYPE_BOOL, .shorthand = 'q', .dest = &q},
     {.type = STARK_CLI_OPT_TYPE_BOOL, .shorthand = 'w', .dest = &w},
-    {.type = STARK_CLI_OPT_TYPE_BOOL, .shorthand = 'e', .dest = &e},
+    {.type = STARK_CLI_OPT_TYPE_BOOL, .shorthand = 'e', .env = "E", .dest = &e},
     {.type = STARK_CLI_OPT_TYPE_BOOL, .longhand = "r", .dest = &r},
     {.type = STARK_CLI_OPT_TYPE_BOOL, .longhand = "t", .dest = &t},
-    {.type = STARK_CLI_OPT_TYPE_BOOL, .longhand = "y", .dest = &y},
+    {.type = STARK_CLI_OPT_TYPE_BOOL, .longhand = "y", .env = "Y", .dest = &y},
     {.type = STARK_CLI_OPT_TYPE_BOOL,
      .mods = STARK_CLI_OPT_MOD_ARRAY,
      .longhand = "ba",

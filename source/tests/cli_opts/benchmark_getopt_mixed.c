@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
 #include <getopt.h>
-#include <string.h>
+#include <stddef.h>
 
 int main(void) {
   static struct option longopts[] = {{"r", no_argument, 0, 'r'},

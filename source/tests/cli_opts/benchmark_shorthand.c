@@ -1,8 +1,5 @@
 #include "test.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-
 int main(void) {
   struct stark_cli_opts cli_opts = {
       .desc = "benchmark-shorthand test", .optc = optc, .optv = optv};
@@ -12,6 +9,7 @@ int main(void) {
 #endif
 
   for (int i = 0; i < 10000000; i++) {
+    // clang-format off
     char *argv[] = {"benchmark-shorthand",
                     "-q",
                     "-w",
@@ -34,6 +32,7 @@ int main(void) {
                     "str1",
                     "-x",
                     "str2"};
+    // clang-format on
 
     if (!stark_cli_opts_parse(&cli_opts, sizeof(argv) / sizeof(argv[0]),
                               argv)) {

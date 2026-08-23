@@ -1,7 +1,5 @@
 #include "test.h"
 
-#include <stdbool.h>
-
 int main(void) {
   // clang-format off
   char *argv[] = {

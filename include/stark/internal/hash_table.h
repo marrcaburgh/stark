@@ -21,7 +21,6 @@
 #define HASH_TABLE_MODE_BINARY (1u << 2)
 #define HASH_TABLE_MODE_RESIZE (1u << 3)
 
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -250,7 +249,7 @@ hash_table_probe_retry:
   ht_idx = ht_oidx;
 
   goto hash_table_probe_retry;
-#else
+#else // STARK_HASH_TABLE_ENABLE_HEAP
   hash_table_error(STARK_HASH_TABLE_ERR_FULL, rcp, 0, NULL);
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 

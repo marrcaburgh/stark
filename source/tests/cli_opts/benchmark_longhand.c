@@ -2,7 +2,6 @@
 #include "test.h"
 
 int main(void) {
-
   struct stark_cli_opts cli_opts = {
       .desc = "benchmark-longhand test", .optc = optc, .optv = optv};
 

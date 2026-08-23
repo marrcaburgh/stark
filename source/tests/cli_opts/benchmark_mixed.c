@@ -7,7 +7,7 @@ int main(void) {
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   init_env(false);
   init_env(true);
-#endif
+#endif // STARK_CLI_OPTS_ENABLE_ENV
 
   for (int i = 0; i < 10000000; i++) {
     // clang-format off
@@ -45,12 +45,12 @@ int main(void) {
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
     stark_cli_opts_free_token_pools(&cli_opts);
-#endif
+#endif // STARK_CLI_OPTS_ENABLE_HEAP
   }
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
   stark_cli_opts_free_group_pools(&cli_opts);
-#endif
+#endif // STARK_CLI_OPTS_ENABLE_HEAP
 
   return 0;
 }

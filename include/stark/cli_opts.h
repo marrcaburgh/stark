@@ -33,9 +33,6 @@
 // sized token pool that is used to tokenize argv and slice delimited string
 // arrays, and the environment if environment variable parsing is enabled.
 //
-// Delimited string arrays can be used with heap allocation disabled, but
-// argv must point to mutable strings; otherwise, this is undefined behavior.
-//
 #ifndef STARK_CLI_OPTS_LH_LUT_SIZE
 #define STARK_CLI_OPTS_LH_LUT_SIZE (64u)
 #endif // STARK_CLI_OPTS_LH_LUT_SIZE
@@ -545,8 +542,6 @@ void stark_cli_opts_free_group_pools(
 
 #undef FLAG_TP_DIRTY
 #undef FLAG_GPS_DIRTY
-#undef FLAG_INVALID
-#undef FLAG_VERIFIED
 #define INTERNAL_CLI_OPTS_UNDEF
 #include "stark/internal/cli_opts.h"
 #endif // STARK_CLI_OPTS_IMPL

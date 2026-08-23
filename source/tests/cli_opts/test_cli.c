@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   init_env(false);
   init_env(true);
-#endif
+#endif // STARK_CLI_OPTS_ENABLE_ENV
 
   if (!stark_cli_opts_parse(&cli_opts, argc, argv)) {
     return 3;
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
   stark_cli_opts_free_token_pools(&cli_opts);
   stark_cli_opts_free_group_pools(&cli_opts);
-#endif
+#endif // STARK_CLI_OPTS_ENABLE_HEAP
 
   return 0;
 }

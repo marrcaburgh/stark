@@ -9,13 +9,11 @@
 #ifndef STARK_CORE_H
 #define STARK_CORE_H
 
-#include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 
 // ============================================================
 // Compiler detection
@@ -25,11 +23,11 @@ extern "C" {
 #define STARK_COMPILER_CLANG 1
 #elif defined(__GNUC__)
 #define STARK_COMPILER_GCC 1
-#endif
+#endif // __clang__/__GNUC__
 
 #if defined(STARK_COMPILER_CLANG) || defined(STARK_COMPILER_GCC)
 #define STARK_COMPILER_GCC_LIKE 1
-#endif
+#endif // STARK_COMPILER_CLANG/STARK_COMPILER_GCC
 
 // ============================================================
 // GCC/Clang macros
@@ -244,7 +242,7 @@ extern "C" {
 // Instruction cache
 #define STARK_CLEAR_CACHE(begin, end) __builtin___clear_cache((begin), (end))
 
-#else
+#else // STARK_COMPILER_GCC_LIKE
 
 #define STARK_HOT
 #define STARK_COLD
@@ -297,10 +295,10 @@ extern "C" {
         type t;                                                                \
       },                                                                       \
       t)
-#endif
+#endif // __STDC_VERSION__ >= 201112L
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
 
 #endif // STARK_CORE_H

@@ -2,11 +2,12 @@
 #define TEST_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "stark/cli_opts.h"
 
 extern bool q, w, e, r, t, y, ba[];
-extern long u, i, o, p, a, s, i64a[];
+extern int64_t u, i, o, p, a, s, i64a[];
 extern double d, f, g, h, j, k, f64a[];
 extern char const *l, *z, *x, *c, *v, *b, *stra[];
 

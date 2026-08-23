@@ -183,6 +183,7 @@ cli_opts_assign_opt(struct stark_cli_opts *const restrict opts,
 
   void *vp = NULL;
   char *str = NULL, *delim = NULL, *rcp;
+  char const *ot;
 
 cli_opts_assign_opt_carr:
   if (STARK_EXPECT_FALSE(opt->mods & STARK_CLI_OPT_MOD_ARRAY &&
@@ -193,11 +194,24 @@ cli_opts_assign_opt_carr:
   }
 
   if (opt->type == STARK_CLI_OPT_TYPE_BOOL) {
-    if (opts->_flags & FLAG_VAL_TOKEN) {
-      cli_opts_error(opts, STARK_CLI_OPTS_ERR_BOOL_VAL, NULL, opts->_token);
 
-      return false;
-    }
+#if defined(STARK_CLI_OPTS_ENABLE_HEAP) && defined(STARK_CLI_OPTS_ENABLE_ENV)
+    if (opt->_fstate == ENVIRONMENT) {
+      if (!(opts->_flags & FLAG_NO_VAL)) {
+        cli_opts_error(opts, STARK_CLI_OPTS_ERR_BOOL_VAL, NULL, opts->_token);
+
+        return false;
+      }
+
+      opts->_flags &= ~FLAG_NO_VAL;
+    } else
+#endif // STARK_CLI_OPTS_ENABLE_HEAP/STARK_CLI_OPTS_ENABLE_ENV
+
+      if ((opts->_flags & FLAG_LONG_OPT) && opts->_flags & FLAG_VAL_TOKEN) {
+        cli_opts_error(opts, STARK_CLI_OPTS_ERR_BOOL_VAL, NULL, opts->_token);
+
+        return false;
+      }
 
     ((bool *)opt->dest)[opt->arr_count] = true;
 
@@ -227,7 +241,7 @@ cli_opts_assign_opt_carr:
     } else {
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
       strcpy(opts->_token, *opts->_argv);
-#else
+#else // STARK_CLI_OPTS_ENABLE_HEAP
       opts->_token = *opts->_argv;
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
@@ -236,8 +250,6 @@ cli_opts_assign_opt_carr:
   }
 
 cli_opts_assign_opt_vfind_failed:
-
-  char const *ot;
 
   switch (opt->type) {
   case STARK_CLI_OPT_TYPE_INT64:
@@ -504,17 +516,17 @@ cli_opts_lut_insert(struct stark_cli_opt *const restrict opt,
   size_t len = 0;
 
   switch (type) {
-  case 0:
+  case LUT_TYPE_LH:
     ot = "longhand";
     ls = "STARK_CLI_OPTS_LH_LUT_SIZE";
     os = opt->longhand;
     break;
-  case 1:
+  case LUT_TYPE_PSC:
     ot = "positional subcommand";
     ls = "STARK_CLI_OPTS_PSC_LUT_SIZE";
     os = opt->longhand;
     break;
-  case 2:
+  case LUT_TYPE_ENV:
     ot = "environment";
     ls = "STARK_CLI_OPTS_ENV_LUT_SIZE";
     os = opt->env;
@@ -665,7 +677,7 @@ cli_opts_init_loop:
     goto cli_opts_init_loope;
   }
 
-  stark_cli_opt_t *const restrict opt = &opts->optv[li];
+  struct stark_cli_opt *const restrict opt = &opts->optv[li];
 
   if (opt->mods & STARK_CLI_OPT_MOD_ARRAY && opt->arr_len <= 1) {
     cli_opts_error(NULL, 0, "cli_opts_init",
@@ -854,6 +866,8 @@ cli_opts_init_loope:
 #undef LUT_TYPE_LH
 #undef LUT_TYPE_PSC
 #undef LUT_TYPE_ENV
+#undef FLAG_INVALID
+#undef FLAG_VERIFIED
 #undef FLAG_VAL_TOKEN
 #undef FLAG_LONG_OPT
 #undef FLAG_POS_OPT
