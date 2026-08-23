@@ -10,12 +10,12 @@ int main(void) {
     "--ba",
     "--ba",
     "--ba",
-    "--i64a", "1,2,3",
-    "--i64a=4,5,6",
-    "--f64a", "1.0,2.0,3.0",
-    "--f64a=4.0,5.0,6.0",
-    "--stra", (char[]){"String1\\,String1.5,String2,String3"},
-    (char[]){"--stra=String4\\,String4.5,String5,String6"},
+    "--i64a", "1;2;3",
+    "--i64a=4;5;6",
+    "--f64a", "1.0;2.0;3.0",
+    "--f64a=4.0;5.0;6.0",
+    "--stra", (char[]){"String1\\;String1.5;String2;String3"},
+    (char[]){"--stra=String4\\;String4.5;String5;String6"},
   };
   // clang-format on
 

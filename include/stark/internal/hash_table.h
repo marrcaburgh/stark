@@ -105,7 +105,7 @@ hash_table_probe(struct stark_hash_table *const restrict htp,
   size_t idx = 0, ht_idx
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
       ,
-         ht_oidx;
+         ht_orig_idx;
 #else  // STARK_HASH_TABLE_ENABLE_HEAP
       ;
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
@@ -177,7 +177,7 @@ hash_table_probe(struct stark_hash_table *const restrict htp,
 
   *klp = idx;
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
-  ht_oidx = ht_idx;
+  ht_orig_idx = ht_idx;
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
@@ -246,7 +246,7 @@ hash_table_probe_retry:
 
   free((void *)bkts);
 
-  ht_idx = ht_oidx;
+  ht_idx = ht_orig_idx;
 
   goto hash_table_probe_retry;
 #else // STARK_HASH_TABLE_ENABLE_HEAP

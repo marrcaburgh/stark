@@ -98,16 +98,16 @@ enum {
 };
 
 typedef struct STARK_ALIGNED(64u) stark_cli_opt {
-  uint8_t type : 4u;
-  uint8_t mods : 4u;
+  uint8_t type;
+  uint8_t mods;
   uint8_t cb_tag : 1u;
-  uint8_t _fstate : 3u;
+  uint8_t _found_state : 3u;
   uint8_t _pad : 4u;
   uint8_t arr_count;
   uint8_t const arr_len;
   unsigned char const shorthand;
   uint8_t group;
-  uint16_t _pad1;
+  uint8_t _pad1;
   char const *const restrict longhand;
   char const *const restrict env;
   void *const restrict dest;
@@ -199,7 +199,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
   for (uint32_t i = 0; i < opts->optc; i++) {
     opt = &opts->optv[i];
-    opt->_fstate = NONE;
+    opt->_found_state = FOUND_NONE;
     opt->arr_count = 0;
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
@@ -296,7 +296,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
   size_t pos_idx = 0;
-  bool eoo = false;
+  bool end_of_opts = false;
 
   for (opts->_argc = argc, opts->_argv = argv;;) {
     opts->_argc--;
@@ -314,13 +314,13 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       continue;
     }
 
-    if (eoo || (*opts->_argv)[0] != '-' || (*opts->_argv)[1] == '\0') {
+    if (end_of_opts || (*opts->_argv)[0] != '-' || (*opts->_argv)[1] == '\0') {
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
       strcpy(opts->_token, *opts->_argv);
 #else  // STARK_CLI_OPTS_ENABLE_HEAP
       opts->_token = *opts->_argv;
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
-      opt = !eoo ? cli_opts_probe(opts, &opts->_psc_lut, LUT_TYPE_PSC) : NULL;
+      opt = !end_of_opts ? cli_opts_probe(opts, &opts->_psc_lut, LUT_TYPE_PSC) : NULL;
 
       if (STARK_EXPECT_FALSE(opt == NULL)) {
         if (pos_idx == opts->_posc) {
@@ -329,7 +329,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
           opt = opts->_pos_lut[pos_idx];
         }
       } else {
-        opt->_fstate = POSITIONAL;
+        opt->_found_state = FOUND_POSITIONAL;
       }
 
       opts->_flags |= FLAG_POS_OPT;
@@ -351,7 +351,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       goto stark_cli_opts_parse_lh;
     }
 
-    bool mop;
+    bool multi_opts;
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
     strcpy(opts->_token, &(*opts->_argv)[1]);
@@ -365,20 +365,20 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
         goto stark_cli_opts_parse_uopt;
       }
 
-      if ((mop = opts->_token[1] != '\0')) {
+      if ((multi_opts = opts->_token[1] != '\0')) {
         opts->_token = opts->_token + 1;
       } else {
         opts->_flags &= ~FLAG_VAL_TOKEN;
       }
 
-      opt->_fstate = SHORTHAND;
+      opt->_found_state = FOUND_SHORTHAND;
       opts->_flags &= ~FLAG_LONG_OPT;
 
       if (STARK_EXPECT_FALSE(!cli_opts_assign_opt(opts, opt))) {
         return false;
       }
 
-      if (!mop) {
+      if (!multi_opts) {
         break;
       }
     }
@@ -387,7 +387,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
   stark_cli_opts_parse_lh:
     if ((*opts->_argv)[2] == '\0') {
-      eoo = true;
+      end_of_opts = true;
       continue;
     }
 
@@ -419,7 +419,7 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
   for (uint32_t i = 0; i < opts->optc; i++) {
     opt = &opts->optv[i];
 
-    if (opt->_fstate != NONE) {
+    if (opt->_found_state != FOUND_NONE) {
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
       if (opt->group != 0) {
         for (size_t i = 0;
@@ -431,42 +431,42 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
           char buf[STARK_CLI_OPTS_STRNAME_MAX * 2 + 22];
           int off = 0;
 
-          switch (opts->_group_table[opt->group - 1][i]->_fstate) {
-          case NONE:
+          switch (opts->_group_table[opt->group - 1][i]->_found_state) {
+          case FOUND_NONE:
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
             continue;
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-          case SHORTHAND:
+          case FOUND_SHORTHAND:
             off = sprintf(buf, "'-%c' with option '-",
                           opts->_group_table[opt->group - 1][i]->shorthand);
             break;
-          case LONGHAND:
+          case FOUND_LONGHAND:
             off = sprintf(buf, "'--%s' with option '--",
                           opts->_group_table[opt->group - 1][i]->longhand);
             break;
-          case POSITIONAL:
+          case FOUND_POSITIONAL:
             off = sprintf(buf, "'%s' with option '",
                           opts->_group_table[opt->group - 1][i]->longhand);
             break;
-          case ENVIRONMENT:
+          case FOUND_ENVIRONMENT:
             off = sprintf(buf, "'%s' with option '",
                           opts->_group_table[opt->group - 1][i]->env);
             break;
           }
 
-          switch (opt->_fstate) {
-          case SHORTHAND:
+          switch (opt->_found_state) {
+          case FOUND_SHORTHAND:
             sprintf(buf + off, "%c'", opt->shorthand);
 
             break;
-          case POSITIONAL:
-          case LONGHAND:
+          case FOUND_POSITIONAL:
+          case FOUND_LONGHAND:
             sprintf(buf + off, "%s'", opt->longhand);
 
             break;
-          case ENVIRONMENT:
+          case FOUND_ENVIRONMENT:
             sprintf(buf + off, "%s'", opt->env);
 
             break;
