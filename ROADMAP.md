@@ -2,14 +2,33 @@
 
 stark is an umbrella project growing in two directions: a C99+ utility
 library today, and a programming language with its supporting toolchain
-over time. Project vision and philosophy are described separately;
-this document tracks goals only.
+over time.
 
 ## Utility library
 
-- help generation for `stark_cli_opts` — a `format` field on the option
-  parser context, consumed by `help()` to render option documentation
-- further utilities added over time; existing APIs remain stable
+- further utilities added over time 
+
+### stark_config
+
+- config file parsing (broadly defined, implementation-specifics will be added here as it gets implemented)
+
+### stark_cli_opts
+
+This is all planned to be implemented by v1.0.0:
+
+- help generation
+- (done) option aliases for longhand/env/subcommands
+- (done) option dependencies (via groups)
+- dynamic array growth (heap mode only)
+- validator arrays with ANY (OR) modifier, which includes callback arrays (ANY does not apply)
+- (done) global options with optional disable toggle for subcommands
+
+### stark_hash_table
+
+This is all planned to be implemented by v1.0.0:
+
+- tombstones and deletion
+- (done) index tracking
 
 ## Toolchain
 

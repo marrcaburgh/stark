@@ -19,8 +19,8 @@ int main(void) {
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
   };
 
-  if (!stark_hash_table_insert(&hash_table, NULL, "my_key", &(int32_t){3532},
-                               false)) {
+  if (stark_hash_table_insert(&hash_table, NULL, "my_key", &(int32_t){3532},
+                              false) == NULL) {
     return 1;
   }
 

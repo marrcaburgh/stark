@@ -31,9 +31,9 @@
 
 #include "stark/core.h"
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +60,7 @@ typedef struct STARK_ALIGNED(32) stark_hash_table_bucket {
   void const *const key;
   void const *const val;
   size_t const key_len;
+  size_t const idx;
 } stark_hash_table_bucket_t;
 
 typedef struct STARK_ALIGNED(32) stark_hash_table {
@@ -69,14 +70,14 @@ typedef struct STARK_ALIGNED(32) stark_hash_table {
   struct stark_hash_table_bucket *bkts;
 } stark_hash_table_t;
 
-bool stark_hash_table_insert(struct stark_hash_table *htp,
-                             enum stark_hash_table_err *rcp, char const *key,
-                             void const *val, bool overwrite);
+struct stark_hash_table_bucket *
+stark_hash_table_insert(struct stark_hash_table *htp,
+                        enum stark_hash_table_err *rcp, char const *key,
+                        void const *val, bool overwrite);
 
-bool stark_hash_table_insert_key_len(struct stark_hash_table *htp,
-                                     enum stark_hash_table_err *rcp,
-                                     void const *key, size_t key_len,
-                                     void const *val, bool overwrite);
+struct stark_hash_table_bucket *stark_hash_table_insert_key_len(
+    struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
+    void const *key, size_t key_len, void const *val, bool overwrite);
 
 struct stark_hash_table_bucket *
 stark_hash_table_extract(struct stark_hash_table *htp, char const *key);
@@ -93,16 +94,16 @@ void stark_hash_table_free_buckets(struct stark_hash_table *htp);
 
 #include "stark/internal/hash_table.h"
 
-bool stark_hash_table_insert(struct stark_hash_table *const restrict htp,
-                             enum stark_hash_table_err *const restrict rcp,
-                             char const *const restrict key,
-                             void const *const restrict val,
-                             bool const overwrite) {
+struct stark_hash_table_bucket *
+stark_hash_table_insert(struct stark_hash_table *const restrict htp,
+                        enum stark_hash_table_err *const restrict rcp,
+                        char const *const restrict key,
+                        void const *const restrict val, bool const overwrite) {
   return hash_table_insert(htp, rcp, (void *)key, SIZE_MAX, val,
                            overwrite ? HASH_TABLE_RETURN_DUPLICATE : 0);
 }
 
-bool stark_hash_table_insert_key_len(
+struct stark_hash_table_bucket *stark_hash_table_insert_key_len(
     struct stark_hash_table *const restrict htp,
     enum stark_hash_table_err *const restrict rcp,
     void const *const restrict key, size_t const key_len,
@@ -115,22 +116,16 @@ bool stark_hash_table_insert_key_len(
 struct stark_hash_table_bucket *
 stark_hash_table_extract(struct stark_hash_table *const restrict htp,
                          char const *const restrict key) {
-  size_t tkl;
-
-  return hash_table_probe(htp, NULL, &tkl, (void *)key, SIZE_MAX,
-                          HASH_TABLE_RETURN_DUPLICATE |
-                              HASH_TABLE_MODE_EXTRACT);
+  return hash_table_probe(htp, NULL, NULL, NULL, (void *)key, SIZE_MAX,
+                          HASH_TABLE_MODE_EXTRACT);
 }
 
 struct stark_hash_table_bucket *
 stark_hash_table_extract_key_len(struct stark_hash_table *const restrict htp,
                                  void const *const restrict key,
                                  size_t const key_len) {
-  size_t tkl;
-
-  return hash_table_probe(htp, NULL, &tkl, (void *)key, key_len,
-                          HASH_TABLE_RETURN_DUPLICATE | HASH_TABLE_MODE_BINARY |
-                              HASH_TABLE_MODE_EXTRACT);
+  return hash_table_probe(htp, NULL, NULL, NULL, (void *)key, key_len,
+                          HASH_TABLE_MODE_BINARY | HASH_TABLE_MODE_EXTRACT);
 }
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP

@@ -37,7 +37,7 @@ void print_longhand(void) {
 }
 
 void print_positional(void) {
-  printf("positional:\n\tint64_t: %lu\n\tfloat64: %f\nstring: %s\n", u, d, l);
+  printf("positional:\n\tint64_t: %lu\n\tfloat64: %f\n\tstring: %s\n", u, d, l);
 }
 
 void print_array(void) {
@@ -69,68 +69,79 @@ struct stark_cli_opt optv[] = {
 
     {.type = STARK_CLI_OPT_TYPE_SUBCOMMAND,
      .mods = STARK_CLI_OPT_MOD_POSITIONAL,
-     .longhand = "subcommand",
+     .longhand = (char const *const[]){"subcommand", NULL},
      .ctx = &subcommand},
 
-    {.type = STARK_CLI_OPT_TYPE_HELP, .shorthand = 'h', .longhand = "help"},
+    {.type = STARK_CLI_OPT_TYPE_HELP,
+     .shorthand = 'h',
+     .longhand = (char const *const[]){"help", NULL}},
 
     {.type = STARK_CLI_OPT_TYPE_BOOL, .shorthand = 'q', .dest = &q},
     {.type = STARK_CLI_OPT_TYPE_BOOL, .shorthand = 'w', .dest = &w},
-    {.type = STARK_CLI_OPT_TYPE_BOOL, .shorthand = 'e',
+    {.type = STARK_CLI_OPT_TYPE_BOOL,
+     .shorthand = 'e',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "E",
+     .env = (char const *const[]){"E", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &e},
-    {.type = STARK_CLI_OPT_TYPE_BOOL, .longhand = "r", .dest = &r},
-    {.type = STARK_CLI_OPT_TYPE_BOOL, .longhand = "t", .dest = &t},
-    {.type = STARK_CLI_OPT_TYPE_BOOL, .longhand = "y",
+    {.type = STARK_CLI_OPT_TYPE_BOOL,
+     .longhand = (char const *const[]){"r", NULL},
+     .dest = &r},
+    {.type = STARK_CLI_OPT_TYPE_BOOL,
+     .longhand = (char const *const[]){"t", NULL},
+     .dest = &t},
+    {.type = STARK_CLI_OPT_TYPE_BOOL,
+     .longhand = (char const *const[]){"y", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "Y",
+     .env = (char const *const[]){"Y", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &y},
     {.type = STARK_CLI_OPT_TYPE_BOOL,
      .mods = STARK_CLI_OPT_MOD_ARRAY,
-     .longhand = "ba",
+     .longhand = (char const *const[]){"ba", NULL},
      .dest = ba,
      .arr_len = sizeof(ba) / sizeof(ba[0])},
 
     {.type = STARK_CLI_OPT_TYPE_INT64,
      .shorthand = 'u',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "U",
+     .env = (char const *const[]){"U", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &u},
     {.type = STARK_CLI_OPT_TYPE_INT64,
      .shorthand = 'i',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "I",
+     .env = (char const *const[]){"I", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &i},
     {.type = STARK_CLI_OPT_TYPE_INT64,
      .shorthand = 'o',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "O",
+     .env = (char const *const[]){"O", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &o},
-    {.type = STARK_CLI_OPT_TYPE_INT64, .longhand = "p",
+    {.type = STARK_CLI_OPT_TYPE_INT64,
+     .longhand = (char const *const[]){"p", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "P",
+     .env = (char const *const[]){"P", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &p},
-    {.type = STARK_CLI_OPT_TYPE_INT64, .longhand = "a",
+    {.type = STARK_CLI_OPT_TYPE_INT64,
+     .longhand = (char const *const[]){"a", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "A",
+     .env = (char const *const[]){"A", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &a},
-    {.type = STARK_CLI_OPT_TYPE_INT64, .longhand = "s",
+    {.type = STARK_CLI_OPT_TYPE_INT64,
+     .longhand = (char const *const[]){"s", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "S",
+     .env = (char const *const[]){"S", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &s},
     {
         .type = STARK_CLI_OPT_TYPE_INT64,
         .mods = STARK_CLI_OPT_MOD_ARRAY,
-        .longhand = "i64a",
+        .longhand = (char const *const[]){"i64a", NULL},
         .dest = i64a,
         .arr_len = sizeof(i64a) / sizeof(i64a[0]),
     },
@@ -138,84 +149,93 @@ struct stark_cli_opt optv[] = {
     {.type = STARK_CLI_OPT_TYPE_FLOAT64,
      .shorthand = 'd',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "D",
+     .env = (char const *const[]){"D", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &d},
     {.type = STARK_CLI_OPT_TYPE_FLOAT64,
      .shorthand = 'f',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "F",
+     .env = (char const *const[]){"F", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &f},
     {.type = STARK_CLI_OPT_TYPE_FLOAT64,
      .shorthand = 'g',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "G",
+     .env = (char const *const[]){"G", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &g},
-    {.type = STARK_CLI_OPT_TYPE_FLOAT64, .longhand = "h",
+    {.type = STARK_CLI_OPT_TYPE_FLOAT64,
+     .longhand = (char const *const[]){"h", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "H",
+     .env = (char const *const[]){"H", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &h},
-    {.type = STARK_CLI_OPT_TYPE_FLOAT64, .longhand = "j",
+    {.type = STARK_CLI_OPT_TYPE_FLOAT64,
+     .longhand = (char const *const[]){"j", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "J",
+     .env = (char const *const[]){"J", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &j},
-    {.type = STARK_CLI_OPT_TYPE_FLOAT64, .longhand = "k",
+    {.type = STARK_CLI_OPT_TYPE_FLOAT64,
+     .longhand = (char const *const[]){"k", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "K",
+     .env = (char const *const[]){"K", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &k},
     {
         .type = STARK_CLI_OPT_TYPE_FLOAT64,
         .mods = STARK_CLI_OPT_MOD_ARRAY,
-        .longhand = "f64a",
+        .longhand = (char const *const[]){"f64a", NULL},
         .dest = f64a,
         .arr_len = sizeof(f64a) / sizeof(f64a[0]),
     },
 
-    {.type = STARK_CLI_OPT_TYPE_STR, .shorthand = 'l',
+    {.type = STARK_CLI_OPT_TYPE_STR,
+     .shorthand = 'l',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "L",
+     .env = (char const *const[]){"L", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &l},
-    {.type = STARK_CLI_OPT_TYPE_STR, .shorthand = 'z',
+    {.type = STARK_CLI_OPT_TYPE_STR,
+     .shorthand = 'z',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "Z",
+     .env = (char const *const[]){"Z", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &z},
-    {.type = STARK_CLI_OPT_TYPE_STR, .shorthand = 'x',
+    {.type = STARK_CLI_OPT_TYPE_STR,
+     .shorthand = 'x',
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "X",
+     .env = (char const *const[]){"X", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &x},
-    {.type = STARK_CLI_OPT_TYPE_STR, .longhand = "c",
+    {.type = STARK_CLI_OPT_TYPE_STR,
+     .longhand = (char const *const[]){"c", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "C",
+     .env = (char const *const[]){"C", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &c},
-    {.type = STARK_CLI_OPT_TYPE_STR, .longhand = "v",
+    {.type = STARK_CLI_OPT_TYPE_STR,
+     .longhand = (char const *const[]){"v", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "V",
+     .env = (char const *const[]){"V", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &v},
-    {.type = STARK_CLI_OPT_TYPE_STR, .longhand = "b",
+    {.type = STARK_CLI_OPT_TYPE_STR,
+     .longhand = (char const *const[]){"b", NULL},
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
-     .env = "B",
+     .env = (char const *const[]){"B", NULL},
 #endif // STARK_CLI_OPTS_ENABLE_ENV
      .dest = &b},
     {
         .type = STARK_CLI_OPT_TYPE_STR,
         .mods = STARK_CLI_OPT_MOD_ARRAY,
-        .longhand = "stra",
+        .longhand = (char const *const[]){"stra", NULL},
         .dest = stra,
         .arr_len = sizeof(stra) / sizeof(stra[0]),
     },
 
     {.type = STARK_CLI_OPT_TYPE_SUBCOMMAND,
-     .longhand = "subcommand",
+     .longhand = (char const *const[]){"subcommand", NULL},
      .ctx = &subcommand},
 };
 

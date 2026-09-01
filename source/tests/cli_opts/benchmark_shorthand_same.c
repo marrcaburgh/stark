@@ -25,8 +25,8 @@ int main(void) {
                     "-xstr2"};
     // clang-format on
 
-    if (!stark_cli_opts_parse(&cli_opts, sizeof(argv) / sizeof(argv[0]),
-                              argv)) {
+    if (stark_cli_opts_parse(&cli_opts, sizeof(argv) / sizeof(argv[0]),
+                             argv) != STARK_CLI_OPTS_ERR_SUCCESS) {
       return 2;
     }
 

@@ -76,16 +76,17 @@ STARK_COLD static void hash_table_error(enum stark_hash_table_err errc,
 #endif // STARK_HASH_TABLE_DISABLE_ERROR_PRINTING
 }
 
-static inline bool hash_table_insert(struct stark_hash_table *htp,
-                                     enum stark_hash_table_err *,
-                                     void const *key, size_t key_len,
-                                     void const *val, uint8_t flags);
+static inline struct stark_hash_table_bucket *
+hash_table_insert(struct stark_hash_table *htp, enum stark_hash_table_err *rcp,
+                  void const *key, size_t key_len, void const *val,
+                  uint8_t flags);
 
 STARK_ALWAYS_INLINE static inline struct stark_hash_table_bucket *
 hash_table_probe(struct stark_hash_table *const restrict htp,
                  enum stark_hash_table_err *const restrict rcp,
-                 size_t *const restrict klp, void const *const restrict key,
-                 size_t const key_len, uint8_t flags) {
+                 size_t *const restrict idxp, size_t *restrict klp,
+                 void const *const restrict key, size_t const key_len,
+                 uint8_t flags) {
   if (STARK_EXPECT_FALSE(htp == NULL)) {
     hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, 3, "htp");
 
@@ -105,10 +106,10 @@ hash_table_probe(struct stark_hash_table *const restrict htp,
   size_t idx = 0, ht_idx
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
       ,
-         ht_orig_idx;
-#else  // STARK_HASH_TABLE_ENABLE_HEAP
-      ;
+         ht_orig_idx
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
+      ,
+         lklp;
 
   switch (htp->alg) {
   case STARK_HASH_TABLE_ALG_FNV1:
@@ -175,6 +176,10 @@ hash_table_probe(struct stark_hash_table *const restrict htp,
     return NULL;
   }
 
+  if (klp == NULL) {
+    klp = &lklp;
+  }
+
   *klp = idx;
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
   ht_orig_idx = ht_idx;
@@ -213,6 +218,10 @@ hash_table_probe_retry:
         return NULL;
       }
 
+      if (idxp != NULL) {
+        *idxp = ht_idx;
+      }
+
       return bkt;
     }
 
@@ -249,14 +258,14 @@ hash_table_probe_retry:
   ht_idx = ht_orig_idx;
 
   goto hash_table_probe_retry;
-#else // STARK_HASH_TABLE_ENABLE_HEAP
+#else  // STARK_HASH_TABLE_ENABLE_HEAP
   hash_table_error(STARK_HASH_TABLE_ERR_FULL, rcp, 0, NULL);
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
   return NULL;
 }
 
-static inline bool
+static inline struct stark_hash_table_bucket *
 hash_table_insert(struct stark_hash_table *const restrict htp,
                   enum stark_hash_table_err *const restrict rcp,
                   void const *const restrict key, size_t const key_len,
@@ -264,15 +273,16 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
   if (STARK_EXPECT_FALSE(val == NULL)) {
     hash_table_error(STARK_HASH_TABLE_ERR_NULL, rcp, 3, "val");
 
-    return false;
+    return NULL;
   }
 
   void const *ktp, *vtp;
   struct stark_hash_table_bucket *bkt;
-  size_t tkl;
+  size_t tkl, idx;
 
-  if ((bkt = hash_table_probe(htp, rcp, &tkl, key, key_len, flags)) == NULL) {
-    return false;
+  if ((bkt = hash_table_probe(htp, rcp, &idx, &tkl, key, key_len, flags)) ==
+      NULL) {
+    return NULL;
   }
 
 #ifdef STARK_HASH_TABLE_ENABLE_HEAP
@@ -284,7 +294,7 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
             NULL)) {
       hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, 0, NULL);
 
-      return false;
+      return NULL;
     }
 
     memcpy((void *)ktp, (void *)key, tkl + !(flags & HASH_TABLE_MODE_BINARY));
@@ -298,7 +308,7 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
 
       hash_table_error(STARK_HASH_TABLE_ERR_OUT_OF_MEMORY, rcp, 0, NULL);
 
-      return false;
+      return NULL;
     }
 
     memcpy((void *)vtp, (void *)val, htp->elem_size);
@@ -312,20 +322,22 @@ hash_table_insert(struct stark_hash_table *const restrict htp,
   }
 #endif // STARK_HASH_TABLE_ENABLE_HEAP
 
-  memcpy(
-      (void *)bkt,
-      &(struct stark_hash_table_bucket){.key = ktp, .val = vtp, .key_len = tkl},
-      sizeof(*bkt));
+  memcpy((void *)bkt,
+         &(struct stark_hash_table_bucket){
+             .key = ktp, .val = vtp, .key_len = tkl, .idx = idx},
+         sizeof(*bkt));
 
-  return true;
+  return bkt;
 }
 
 #endif // STARK_INTERNAL_HASH_TABLE_H
 
-#ifdef INTERNAL_HASH_TABLE_UNDEF
+#if !defined(STARK_INTERNAL_HASH_TABLE_SKIP_UNDEF) &&                          \
+    defined(INTERNAL_HASH_TABLE_UNDEF)
+#define STARK_INTERNAL_HASH_TABLE_SKIP_UNDEF
 #undef HASH_TABLE_RETURN_DUPLICATE
 #undef HASH_TABLE_MODE_EXTRACT
 #undef HASH_TABLE_MODE_BINARY
 #undef HASH_TABLE_MODE_RESIZE
 #undef INTERNAL_HASH_TABLE_UNDEF
-#endif // INTERNAL_HASH_TABLE_UNDEF
+#endif // !STARK_INTERNAL_HASH_TABLE_SKIP_UNDEF && INTERNAL_HASH_TABLE_UNDEF

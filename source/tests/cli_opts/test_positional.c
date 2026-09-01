@@ -14,8 +14,9 @@ int main(void) {
   struct stark_cli_opts cli_opts = {
       .desc = "positional test", .optc = optc, .optv = optv};
 
-  if (!stark_cli_opts_parse(&cli_opts, sizeof(argv) / sizeof(argv[0]), argv)) {
-    return 3;
+  if (stark_cli_opts_parse(&cli_opts, sizeof(argv) / sizeof(argv[0]), argv) !=
+      STARK_CLI_OPTS_ERR_SUCCESS) {
+    return 2;
   }
 
   print_positional();

@@ -20,56 +20,60 @@
 //
 // Define these macros before including this header or with your build system:
 //
-// Define STARK_CLI_OPTS_LH_LUT_SIZE, STARK_CLI_OPTS_POS_LUT_SIZE,
-// STARK_CLI_OPTS_PSC_LUT_SIZE, and/or STARK_CLI_OPTS_ENV_LUT_SIZE to change the
-// size of each corresponding lookup table. Each LUT except for POS (positional)
-// must be a power of two. The default sizes are listed below.
-//
 // Define STARK_CLI_OPTS_ENABLE_ENV to enable environment variable parsing if
-// you're on an operating system that defines `environ` or `_environ` as part of
-// the C standard library. See below.
+// you're building for Unix-like operating systems, macOS, or Windows. See
+// below.
 //
 // Define STARK_CLI_OPTS_ENABLE_HEAP to enable heap allocation for a worst-case
 // sized token pool that is used to tokenize argv and slice delimited string
 // arrays, and the environment if environment variable parsing is enabled.
 //
-#ifndef STARK_CLI_OPTS_LH_LUT_SIZE
-#define STARK_CLI_OPTS_LH_LUT_SIZE (64u)
-#endif // STARK_CLI_OPTS_LH_LUT_SIZE
-#ifndef STARK_CLI_OPTS_POS_LUT_SIZE
-#define STARK_CLI_OPTS_POS_LUT_SIZE (4u)
-#endif // STARK_CLI_OPTS_POS_LUT_SIZE
-#ifndef STARK_CLI_OPTS_PSC_LUT_SIZE
-#define STARK_CLI_OPTS_PSC_LUT_SIZE (8u)
-#endif // STARK_CLI_OPTS_PSC_LUT_SIZE
-#ifndef STARK_CLI_OPTS_ENV_LUT_SIZE
-#define STARK_CLI_OPTS_ENV_LUT_SIZE (16u)
-#endif // STARK_CLI_OPTS_ENV_LUT_SIZE
+
+#if defined(STARK_CLI_OPTS_ENABLE_ENV) && !defined(STARK_CLI_OPTS_ENABLE_HEAP)
+#error "STARK_CLI_OPTS_ENABLE_ENV requires STARK_CLI_OPTS_ENABLE_HEAP"
+#endif // STARK_CLI_OPTS_ENABLE_ENV && !STARK_CLI_OPTS_ENABLE_HEAP
+
+#define STARK_CLI_OPTS_LONGHAND_MAX (512u)
+#define STARK_CLI_OPTS_POSITIONAL_MAX (8u)
+#define STARK_CLI_OPTS_POSITIONAL_SUBCOMMAND_MAX (512u)
+#define STARK_CLI_OPTS_ENVIRONMENT_MAX (512u)
+#define STARK_CLI_OPTS_GROUP_MAX (512u)
 
 #include "stark/core.h"
 #include "stark/hash_table.h"
 
+#include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+
+#define STARK_CLI_OPT_GROUP_DEP(g) (UINT64_C(1) << ((g) & 63u))
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
 typedef enum stark_cli_opts_err {
-  STARK_CLI_OPTS_ERR_UNKNOWN_OPT = 1u,
-  STARK_CLI_OPTS_ERR_BOOL_VAL = 2u,
-  STARK_CLI_OPTS_ERR_NO_VAL = 3u,
-  STARK_CLI_OPTS_ERR_OOB = 4u,
-  STARK_CLI_OPTS_ERR_NAN = 5u,
-  STARK_CLI_OPTS_ERR_OOR = 6u,
-  STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPT = 7u,
-  STARK_CLI_OPTS_ERR_CONFLICTING_OPT = 8u,
+  /* function return codes */
+  STARK_CLI_OPTS_ERR_SUCCESS = 0u,
+  STARK_CLI_OPTS_ERR_FAILURE = 1u,
+  STARK_CLI_OPTS_ERR_EXIT = 2u,
+
+  /* builtin errors */
+  STARK_CLI_OPTS_ERR_UNKNOWN_OPT = 3u,
+  STARK_CLI_OPTS_ERR_UNEXPECTED_VAL = 4u,
+  STARK_CLI_OPTS_ERR_NO_VAL = 5u,
+  STARK_CLI_OPTS_ERR_OOB = 6u,
+  STARK_CLI_OPTS_ERR_NAN = 7u,
+  STARK_CLI_OPTS_ERR_OOR = 8u,
+  STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPT = 9u,
+  STARK_CLI_OPTS_ERR_CONFLICTING_OPT = 10u,
+  STARK_CLI_OPTS_ERR_MISSING_OPT_DEPENDENCY = 11u,
 } stark_cli_opts_err_t;
 
 enum {
-  /* regular types */
+  /* C types */
   STARK_CLI_OPT_TYPE_BOOL = 1u,
   STARK_CLI_OPT_TYPE_INT64 = 2u,
   STARK_CLI_OPT_TYPE_INT32 = 3u,
@@ -86,30 +90,35 @@ enum {
   /* special types */
   STARK_CLI_OPT_TYPE_SUBCOMMAND = 13u,
 
-  /* bltn types */
+  /* builtin types */
   STARK_CLI_OPT_TYPE_HELP = 14u,
+  STARK_CLI_OPT_TYPE_VERSION = 15u
 };
 
 enum {
-  STARK_CLI_OPT_MOD_REQUIRED = (1u << 0u),
-  STARK_CLI_OPT_MOD_HIDDEN = (1u << 1u),
-  STARK_CLI_OPT_MOD_POSITIONAL = (1u << 2u),
-  STARK_CLI_OPT_MOD_ARRAY = (1u << 3u),
+  STARK_CLI_OPT_MOD_GROUP = (1u << 0u),
+  STARK_CLI_OPT_MOD_NO_GLOBALS = (1u << 1u),
+  STARK_CLI_OPT_MOD_REQUIRED = (1u << 2u),
+  STARK_CLI_OPT_MOD_POSITIONAL = (1u << 3u),
+  STARK_CLI_OPT_MOD_ARRAY = (1u << 4u),
+  STARK_CLI_OPT_MOD_HIDDEN = (1u << 5u),
+  STARK_CLI_OPT_MOD_SHOW_DEFAULT = (1u << 6u),
 };
 
 typedef struct STARK_ALIGNED(64u) stark_cli_opt {
-  uint8_t type;
-  uint8_t mods;
-  uint8_t cb_tag : 1u;
-  uint8_t _found_state : 3u;
-  uint8_t _pad : 4u;
+  uint32_t type : 4u;
+  uint32_t mods : 7u;
+  uint32_t cb_tag : 1u;
+  uint32_t group : 9u;
+  uint32_t _found_state : 3u;
+  uint32_t _found_idx : 3u;
+  uint32_t _pad0 : 5u;
+  uint8_t _pad1;
   uint8_t arr_count;
   uint8_t const arr_len;
   unsigned char const shorthand;
-  uint8_t group;
-  uint8_t _pad1;
-  char const *const restrict longhand;
-  char const *const restrict env;
+  char const *const *const restrict longhand;
+  char const *const *const restrict env;
   void *const restrict dest;
   bool (*const assign)(char const *const restrict str,
                        void *const restrict dest, uint8_t const arr_count,
@@ -120,154 +129,182 @@ typedef struct STARK_ALIGNED(64u) stark_cli_opt {
                            const void *const restrict ctx);
   } callback;
   void *const restrict ctx;
-  char const *const restrict usage;
-} stark_cli_opt_t; // Fits into one 64-bit L1 cache line or 64 bytes of memory.
+  char const *const restrict desc;
+} stark_cli_opt_t; // Fits into one 64-bit CPU's L1 cache line or 64 bytes of
+                   // memory.
 
 typedef struct stark_cli_opts {
-  struct stark_hash_table _lh_lut, _psc_lut, _env_lut;
-  struct stark_hash_table_bucket _lh_lut_bkts[STARK_CLI_OPTS_LH_LUT_SIZE],
-      _psc_lut_bkts[STARK_CLI_OPTS_PSC_LUT_SIZE],
-      _env_lut_bkts[STARK_CLI_OPTS_ENV_LUT_SIZE];
-  struct stark_cli_opt *const optv, **_group_table[UINT8_MAX],
-      *_sh_lut[UCHAR_MAX + 1u], *_pos_lut[STARK_CLI_OPTS_POS_LUT_SIZE];
-  void (*const err_callback)(char const *const restrict err_msg);
+  struct stark_hash_table _lh_lut, _pos_sbc_lut, _env_lut;
+  struct stark_hash_table_bucket _lh_lut_bkts[STARK_CLI_OPTS_LONGHAND_MAX],
+      _pos_sbc_lut_bkts[STARK_CLI_OPTS_POSITIONAL_SUBCOMMAND_MAX],
+      _env_lut_bkts[STARK_CLI_OPTS_ENVIRONMENT_MAX];
+  struct stark_cli_opt **_group_table[STARK_CLI_OPTS_GROUP_MAX],
+      *_sh_lut[UCHAR_MAX],
+      *_pos_lut[STARK_CLI_OPTS_POSITIONAL_MAX], *const optv, *goptv;
   char *_token_pool, *_token, **_argv;
-  char const *const restrict desc;
+  char const *const restrict name, *version, *desc, *footer;
+  uint64_t const group_deps[8];
   int _argc;
   uint32_t _posc;
   uint16_t const optc;
+  uint16_t goptc;
   uint8_t _flags;
+  uint8_t _lh_idx_lut[STARK_CLI_OPTS_LONGHAND_MAX];
+  uint8_t _env_idx_lut[STARK_CLI_OPTS_ENVIRONMENT_MAX];
+  uint8_t _pos_sbc_idx_lut[STARK_CLI_OPTS_POSITIONAL_SUBCOMMAND_MAX];
 } stark_cli_opts_t;
 
-bool stark_cli_opts_parse(struct stark_cli_opts *opts, int argc, char **argv);
+enum stark_cli_opts_err stark_cli_opts_parse(struct stark_cli_opts *opts,
+                                             int argc, char **argv);
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
 void stark_cli_opts_free_token_pools(struct stark_cli_opts *opts);
 void stark_cli_opts_free_group_pools(struct stark_cli_opts *opts);
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-#ifdef STARK_CLI_OPTS_IMPL
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
+#ifdef STARK_CLI_OPTS_IMPL
 #define FLAG_TP_DIRTY (1u << 6u)
 #define FLAG_GPS_DIRTY (1u << 7u)
 
 #include "stark/internal/cli_opts.h"
+#if defined(__APPLE__) && defined(__MACH__)
+#include <crt_externs.h>
+#endif // __APPLE__ && __MACH__
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__linux)
 #include <linux/limits.h>
-#endif // __linux__
-#include <inttypes.h>
-#include <stddef.h>
+#endif // __linux__ || __linux
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
-                          int const argc, char **argv) {
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+enum stark_cli_opts_err
+stark_cli_opts_parse(struct stark_cli_opts *const restrict opts, int const argc,
+                     char **argv) {
   if (STARK_EXPECT_FALSE(opts == NULL)) {
-    cli_opts_error(NULL, 0, "stark_cli_opts_parse", "cli_opts cannot be NULL");
+    cli_opts_error(NULL, 0, "stark_cli_opts_parse", "opts cannot be NULL");
 
-    return false;
-  } else if (STARK_EXPECT_FALSE(argv == NULL)) {
-    cli_opts_error(NULL, 0, "stark_cli_opts_parse", "argv cannot be NULL");
-
-    return false;
+    return STARK_CLI_OPTS_ERR_FAILURE;
   } else if (STARK_EXPECT_FALSE(argc <= 0)) {
     cli_opts_error(NULL, 0, "stark_cli_opts_parse",
                    "argc must be greater than 0");
 
-    return false;
+    return STARK_CLI_OPTS_ERR_FAILURE;
+  } else if (STARK_EXPECT_FALSE(argv == NULL)) {
+    cli_opts_error(NULL, 0, "stark_cli_opts_parse", "argv cannot be NULL");
+
+    return STARK_CLI_OPTS_ERR_FAILURE;
   } else if (STARK_EXPECT_FALSE(!cli_opts_init(opts))) {
-    return false;
-  } else if (STARK_EXPECT_FALSE(!(opts->_flags & FLAG_VERIFIED))) {
-    return false;
-  } else if (STARK_EXPECT_FALSE((opts->_flags & FLAG_INVALID))) {
-    return false;
+    return STARK_CLI_OPTS_ERR_FAILURE;
   }
-
-#ifdef STARK_CLI_OPTS_ENABLE_HEAP
-  else if (STARK_EXPECT_FALSE(((opts->_flags & FLAG_TP_DIRTY) &&
-                               opts->_token_pool != NULL &&
-                               opts->_token != NULL))) {
-    cli_opts_error(NULL, 0, "stark_cli_opts_parse",
-                   "dirty; did you forget 'stark_cli_opts_free_token_pool()'?");
-
-    return false;
-  }
-#endif // STARK_CLI_OPTS_ENABLE_HEAP
 
   struct stark_cli_opt *opt;
+  enum stark_cli_opts_err err;
+  bool gmode = false;
 
-  for (uint32_t i = 0; i < opts->optc; i++) {
-    opt = &opts->optv[i];
+stark_cli_opts_parse_reset:
+  for (uint32_t i = 0; i < (gmode ? opts->goptc : opts->optc); i++) {
+    opt = &(gmode ? opts->goptv : opts->optv)[i];
     opt->_found_state = FOUND_NONE;
     opt->arr_count = 0;
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-    if (!(opts->_flags & FLAG_GPS_DIRTY) && opt->group != 0) {
+    if (!(opts->_flags & FLAG_GPS_DIRTY) &&
+        (opt->mods & STARK_CLI_OPT_MOD_GROUP)) {
       size_t count = 1;
 
-      if (opts->_group_table[opt->group - 1] == NULL) {
-        opts->_group_table[opt->group - 1] =
-            malloc(sizeof(size_t) + opts->optc * sizeof(void *));
+      if (opts->_group_table[opt->group] == NULL) {
+        opts->_group_table[opt->group] = malloc(
+            sizeof(size_t) + (opts->optc + opts->goptc) * sizeof(void *));
 
-        if (opts->_group_table[opt->group - 1] == NULL) {
+        if (opts->_group_table[opt->group] == NULL) {
           cli_opts_error(NULL, 0, "stark_cli_opts_parse",
                          "allocation for group pool failed");
 
-          return false;
+          return STARK_CLI_OPTS_ERR_FAILURE;
         }
 
-        opts->_group_table[opt->group - 1] =
+        opts->_group_table[opt->group] =
             (struct stark_cli_opt **)(((size_t *)
-                                           opts->_group_table[opt->group - 1]) +
+                                           opts->_group_table[opt->group]) +
                                       1);
       } else {
-        count += *(((size_t *)opts->_group_table[opt->group - 1]) - 1);
+        count += *(((size_t *)opts->_group_table[opt->group]) - 1);
       }
 
-      *(((size_t *)opts->_group_table[opt->group - 1]) - 1) = count;
-      opts->_group_table[opt->group - 1][count - 1] = opt;
+      *(((size_t *)opts->_group_table[opt->group]) - 1) = count;
+      opts->_group_table[opt->group][count - 1] = opt;
     }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
   }
 
-  opts->_flags |= FLAG_GPS_DIRTY;
+  if (opts->goptv != NULL && !gmode) {
+    gmode = true;
+
+    goto stark_cli_opts_parse_reset;
+  }
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-  opts->_token_pool = malloc(
+  opts->_flags |= FLAG_GPS_DIRTY;
+#endif // STARK_CLI_OPTS_ENABLE_HEAP
+
+#ifdef STARK_CLI_OPTS_ENABLE_HEAP
+  size_t max =
 #ifdef ARG_MAX
       ARG_MAX
 #else // ARG_MAX
 #ifdef _WIN32
-      UINT16_MAX
+      32768u
 #else  // _WIN32
       STARK_CLI_OPTS_ARG_MAX_FALLBACK
 #endif // _WIN32
 #endif // ARG_MAX
-  );
+      ;
 
-  if (opts->_token_pool == NULL) {
+#if defined(STARK_CLI_OPTS_ENABLE_ENV) && defined(_WIN32)
+  bool allocated = false;
+
+  goto stark_cli_opts_parse_winalloc;
+
+stark_cli_opts_parse_winalloced:
+  allocated = true;
+#endif // STARK_CLI_OPTS_ENABLE_ENV && _WIN32
+
+  if (!(opts->_flags & FLAG_TP_DIRTY) &&
+      (opts->_token_pool = malloc(max)) == NULL) {
     cli_opts_error(NULL, 0, "stark_cli_opts_parse",
                    "allocation failed for token pool");
 
-    return false;
+    return STARK_CLI_OPTS_ERR_FAILURE;
   }
 
   opts->_token = opts->_token_pool;
   opts->_flags |= FLAG_TP_DIRTY;
+
+#if defined(STARK_CLI_OPTS_ENABLE_ENV) && defined(_WIN32)
+stark_cli_opts_parse_winalloc:
+#endif // STARK_CLI_OPTS_ENABLE_ENV && _WIN32
 
 #ifdef STARK_CLI_OPTS_ENABLE_ENV
   char **envp;
 #ifdef _WIN32
   extern char **_environ;
   envp = _environ;
-#else // _WIN32
-#ifdef __unix__
+#elif defined(__APPLE__) && defined(__MACH__)
+  envp = *_NSGetEnviron();
+#elif defined(__unix__) || defined(__unix)
   extern char **environ;
   envp = environ;
-#else  // __unix__
+#else  // __unix__ || __unix
   envp = NULL;
-#endif // __unix__
 #endif // _WIN32
 
   if (STARK_EXPECT_FALSE(envp == NULL)) {
@@ -276,19 +313,32 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
         "unsupported operating system for environment variable parsing; "
         "remove STARK_CLI_OPTS_ENABLE_ENV");
 
-    return false;
+    return STARK_CLI_OPTS_ERR_FAILURE;
   }
+
+#if defined(STARK_CLI_OPTS_ENABLE_ENV) && defined(_WIN32)
+  if (!allocated) {
+    size_t envc = 0;
+
+    for (; envp[envc] != NULL; envc++)
+      ;
+
+    max *= envc;
+
+    goto stark_cli_opts_parse_winalloced;
+  }
+#endif // STARK_CLI_OPTS_ENABLE_ENV && _WIN32
 
   for (; *envp != NULL; envp++) {
     opts->_flags |= FLAG_VAL_TOKEN;
 
     strcpy(opts->_token, *envp);
 
-    if (STARK_EXPECT_FALSE((opt = cli_opts_probe(opts, &opts->_env_lut,
-                                                 LUT_TYPE_ENV)) != NULL)) {
-
-      if (STARK_EXPECT_FALSE(!cli_opts_assign_opt(opts, opt))) {
-        return false;
+    if (STARK_EXPECT_FALSE((opt = cli_opts_probe(opts, LUT_TYPE_ENV)) !=
+                           NULL)) {
+      if ((err = cli_opts_assign_opt(opts, opt)) !=
+          STARK_CLI_OPTS_ERR_SUCCESS) {
+        return err;
       }
     }
   }
@@ -306,21 +356,21 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
     }
 
     opts->_argv++;
-    opts->_flags |= FLAG_VAL_TOKEN;
-    opt = NULL;
 
-    if (STARK_EXPECT_FALSE((*opts->_argv) == NULL ||
-                           (*opts->_argv)[0] == '\0')) {
+    if (*opts->_argv == NULL || *(opts->_argv)[0] == '\0') {
       continue;
     }
+
+    opts->_flags |= FLAG_VAL_TOKEN;
 
     if (end_of_opts || (*opts->_argv)[0] != '-' || (*opts->_argv)[1] == '\0') {
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
       strcpy(opts->_token, *opts->_argv);
+
 #else  // STARK_CLI_OPTS_ENABLE_HEAP
       opts->_token = *opts->_argv;
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
-      opt = !end_of_opts ? cli_opts_probe(opts, &opts->_psc_lut, LUT_TYPE_PSC) : NULL;
+      opt = !end_of_opts ? cli_opts_probe(opts, LUT_TYPE_POS_SBC) : NULL;
 
       if (STARK_EXPECT_FALSE(opt == NULL)) {
         if (pos_idx == opts->_posc) {
@@ -328,14 +378,13 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
         } else {
           opt = opts->_pos_lut[pos_idx];
         }
-      } else {
-        opt->_found_state = FOUND_POSITIONAL;
       }
 
       opts->_flags |= FLAG_POS_OPT;
 
-      if (STARK_EXPECT_FALSE(!cli_opts_assign_opt(opts, opt))) {
-        return false;
+      if ((err = cli_opts_assign_opt(opts, opt)) !=
+          STARK_CLI_OPTS_ERR_SUCCESS) {
+        return err;
       }
 
       if (opt->arr_count == opt->arr_len) {
@@ -361,12 +410,13 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
 
     while (opts->_flags & FLAG_VAL_TOKEN) {
       if (STARK_EXPECT_FALSE(
-              (opt = opts->_sh_lut[(unsigned char)opts->_token[0]]) == NULL)) {
+              (opt = opts->_sh_lut[(unsigned char)opts->_token[0] - 1]) ==
+              NULL)) {
         goto stark_cli_opts_parse_uopt;
       }
 
       if ((multi_opts = opts->_token[1] != '\0')) {
-        opts->_token = opts->_token + 1;
+        opts->_token = &opts->_token[1];
       } else {
         opts->_flags &= ~FLAG_VAL_TOKEN;
       }
@@ -374,8 +424,9 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
       opt->_found_state = FOUND_SHORTHAND;
       opts->_flags &= ~FLAG_LONG_OPT;
 
-      if (STARK_EXPECT_FALSE(!cli_opts_assign_opt(opts, opt))) {
-        return false;
+      if ((err = cli_opts_assign_opt(opts, opt)) !=
+          STARK_CLI_OPTS_ERR_SUCCESS) {
+        return err;
       }
 
       if (!multi_opts) {
@@ -399,13 +450,12 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
     opts->_token = &(*opts->_argv)[2];
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
 
-    if (STARK_EXPECT_FALSE((opt = cli_opts_probe(opts, &opts->_lh_lut,
-                                                 LUT_TYPE_LH)) == NULL)) {
+    if (STARK_EXPECT_FALSE((opt = cli_opts_probe(opts, LUT_TYPE_LH)) == NULL)) {
       goto stark_cli_opts_parse_uopt;
     }
 
-    if (STARK_EXPECT_FALSE(!cli_opts_assign_opt(opts, opt))) {
-      return false;
+    if ((err = cli_opts_assign_opt(opts, opt)) != STARK_CLI_OPTS_ERR_SUCCESS) {
+      return err;
     }
 
     continue;
@@ -413,105 +463,117 @@ bool stark_cli_opts_parse(struct stark_cli_opts *const restrict opts,
   stark_cli_opts_parse_uopt:
     cli_opts_error(opts, STARK_CLI_OPTS_ERR_UNKNOWN_OPT, NULL, opts->_token);
 
-    return false;
+    return STARK_CLI_OPTS_ERR_FAILURE;
   }
 
-  for (uint32_t i = 0; i < opts->optc; i++) {
-    opt = &opts->optv[i];
+  gmode = false;
+
+stark_cli_opts_parse_post_check:
+  for (uint32_t i = 0; i < (gmode ? opts->goptc : opts->optc); i++) {
+    opt = &(gmode ? opts->goptv : opts->optv)[i];
 
     if (opt->_found_state != FOUND_NONE) {
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
-      if (opt->group != 0) {
-        for (size_t i = 0;
-             i < *(((size_t *)opts->_group_table[opt->group - 1]) - 1); i++) {
-          if (opts->_group_table[opt->group - 1][i] == opt) {
+      if (opt->mods & STARK_CLI_OPT_MOD_GROUP) {
+        for (size_t j = 0;
+             j < *(((size_t *)opts->_group_table[opt->group]) - 1); j++) {
+          struct stark_cli_opt *gropt = opts->_group_table[opt->group][j];
+          if (gropt == opt) {
             continue;
           }
 
-          char buf[STARK_CLI_OPTS_STRNAME_MAX * 2 + 22];
-          int off = 0;
+          char buf[STARK_CLI_OPTS_STRNAME_MAX * 2 + 29];
 
-          switch (opts->_group_table[opt->group - 1][i]->_found_state) {
-          case FOUND_NONE:
-#endif // STARK_CLI_OPTS_ENABLE_HEAP
+          if (!GET_GROUP_DEP(opts->group_deps, opt->group)) {
+            if (gropt->_found_state == FOUND_NONE) {
+              continue;
+            }
 
-            continue;
+            char const *gname = gropt->_found_state == FOUND_SHORTHAND
+                                    ? (char[]){(char)gropt->shorthand, '\0'}
+                                : gropt->_found_state == FOUND_ENVIRONMENT
+                                    ? gropt->env[gropt->_found_idx]
+                                    : gropt->longhand[gropt->_found_idx];
+            char const *oname = opt->_found_state == FOUND_SHORTHAND
+                                    ? (char[]){(char)opt->shorthand, '\0'}
+                                : opt->_found_state == FOUND_ENVIRONMENT
+                                    ? opt->env[opt->_found_idx]
+                                    : opt->longhand[opt->_found_idx];
+            size_t glen = strlen(gname), olen = strlen(oname);
 
-#ifdef STARK_CLI_OPTS_ENABLE_HEAP
-          case FOUND_SHORTHAND:
-            off = sprintf(buf, "'-%c' with option '-",
-                          opts->_group_table[opt->group - 1][i]->shorthand);
-            break;
-          case FOUND_LONGHAND:
-            off = sprintf(buf, "'--%s' with option '--",
-                          opts->_group_table[opt->group - 1][i]->longhand);
-            break;
-          case FOUND_POSITIONAL:
-            off = sprintf(buf, "'%s' with option '",
-                          opts->_group_table[opt->group - 1][i]->longhand);
-            break;
-          case FOUND_ENVIRONMENT:
-            off = sprintf(buf, "'%s' with option '",
-                          opts->_group_table[opt->group - 1][i]->env);
-            break;
+            if (glen > STARK_CLI_OPTS_STRNAME_MAX) {
+              glen = STARK_CLI_OPTS_STRNAME_MAX;
+            }
+
+            if (olen > STARK_CLI_OPTS_STRNAME_MAX) {
+              olen = STARK_CLI_OPTS_STRNAME_MAX;
+            }
+
+            sprintf(buf, "'%s%.*s' with option '%s%.*s'",
+                    gropt->_found_state == FOUND_SHORTHAND  ? "-"
+                    : gropt->_found_state == FOUND_LONGHAND ? "--"
+                                                            : "",
+                    (int)glen, gname,
+                    opt->_found_state == FOUND_SHORTHAND  ? "-"
+                    : opt->_found_state == FOUND_LONGHAND ? "--"
+                                                          : "",
+                    (int)olen, oname);
+
+            cli_opts_error(opts, STARK_CLI_OPTS_ERR_CONFLICTING_OPT, NULL, buf);
+
+            return STARK_CLI_OPTS_ERR_FAILURE;
+          } else if (gropt->_found_state == FOUND_NONE) {
+            bool is_long = (opt->_found_state == FOUND_POSITIONAL ||
+                            opt->_found_state == FOUND_LONGHAND);
+            bool is_env = (opt->_found_state == FOUND_ENVIRONMENT);
+
+            cli_opts_error(opts, STARK_CLI_OPTS_ERR_MISSING_OPT_DEPENDENCY,
+                           is_env ? gropt->env[0]
+                           : gropt->longhand[0] != NULL
+                               ? gropt->longhand[0]
+                               : (char[]){(char)gropt->shorthand, '\0'},
+                           is_env    ? opt->env[0]
+                           : is_long ? opt->longhand[0]
+                                     : (char[]){(char)opt->shorthand, '\0'});
+
+            return STARK_CLI_OPTS_ERR_FAILURE;
           }
-
-          switch (opt->_found_state) {
-          case FOUND_SHORTHAND:
-            sprintf(buf + off, "%c'", opt->shorthand);
-
-            break;
-          case FOUND_POSITIONAL:
-          case FOUND_LONGHAND:
-            sprintf(buf + off, "%s'", opt->longhand);
-
-            break;
-          case FOUND_ENVIRONMENT:
-            sprintf(buf + off, "%s'", opt->env);
-
-            break;
-          }
-
-          cli_opts_error(opts, STARK_CLI_OPTS_ERR_CONFLICTING_OPT, NULL, buf);
-
-          return false;
         }
       }
 #endif // STARK_CLI_OPTS_ENABLE_HEAP
     } else if (opt->mods & STARK_CLI_OPT_MOD_REQUIRED) {
-      char buf[STARK_CLI_OPTS_STRNAME_MAX + 3];
+      cli_opts_error(opts, STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPT, NULL,
+                     opt->env != NULL ? opt->env[0]
+                     : opt->longhand != NULL
+                         ? opt->longhand[0]
+                         : (char[]){(char)opt->shorthand, '\0'});
 
-      sprintf(buf,
-              opt->env != NULL || ((opt->mods & STARK_CLI_OPT_MOD_POSITIONAL) &&
-                                   (opt->type == STARK_CLI_OPT_TYPE_SUBCOMMAND))
-                  ? "%s"
-              : opt->longhand != NULL ? "--%s"
-                                      : "-%s",
-              opt->env != NULL        ? opt->env
-              : opt->longhand != NULL ? opt->longhand
-                                      : (char[]){opt->shorthand, '\0'});
-
-      cli_opts_error(opts, STARK_CLI_OPTS_ERR_MISSING_REQUIRED_OPT, NULL, buf);
-
-      return false;
+      return STARK_CLI_OPTS_ERR_FAILURE;
     }
   }
 
-  return true;
+  if (opts->goptv != NULL && !gmode) {
+    gmode = true;
+
+    goto stark_cli_opts_parse_post_check;
+  }
+
+  return STARK_CLI_OPTS_ERR_SUCCESS;
 }
 
 #ifdef STARK_CLI_OPTS_ENABLE_HEAP
 void stark_cli_opts_free_token_pools(
     struct stark_cli_opts *const restrict opts) {
-  free(opts->_token_pool);
-  opts->_token_pool = NULL;
-  opts->_token = NULL;
+  if (!(opts->_flags & FLAG_TP_DIRTY)) {
+    return;
+  }
+
   opts->_flags &= ~FLAG_TP_DIRTY;
 
+  free(opts->_token_pool);
+
   for (uint32_t i = 0; i < opts->optc; i++) {
-    if (opts->optv[i].type == STARK_CLI_OPT_TYPE_SUBCOMMAND &&
-        (((struct stark_cli_opts *)opts->optv[i].ctx)->_flags &
-         FLAG_TP_DIRTY)) {
+    if (opts->optv[i].type == STARK_CLI_OPT_TYPE_SUBCOMMAND) {
       stark_cli_opts_free_token_pools(
           (struct stark_cli_opts *)opts->optv[i].ctx);
     }
@@ -520,9 +582,13 @@ void stark_cli_opts_free_token_pools(
 
 void stark_cli_opts_free_group_pools(
     struct stark_cli_opts *const restrict opts) {
+  if (!(opts->_flags & FLAG_GPS_DIRTY)) {
+    return;
+  }
+
   opts->_flags &= ~FLAG_GPS_DIRTY;
 
-  for (uint8_t i = 0; i < UINT8_MAX; i++) {
+  for (uint16_t i = 0; i < STARK_CLI_OPTS_GROUP_MAX; i++) {
     if (opts->_group_table[i] != NULL) {
       free(((size_t *)opts->_group_table[i]) - 1);
       opts->_group_table[i] = NULL;
@@ -530,9 +596,7 @@ void stark_cli_opts_free_group_pools(
   }
 
   for (uint32_t i = 0; i < opts->optc; i++) {
-    if (opts->optv[i].type == STARK_CLI_OPT_TYPE_SUBCOMMAND &&
-        (((struct stark_cli_opts *)opts->optv[i].ctx)->_flags &
-         FLAG_GPS_DIRTY)) {
+    if (opts->optv[i].type == STARK_CLI_OPT_TYPE_SUBCOMMAND) {
       stark_cli_opts_free_group_pools(
           (struct stark_cli_opts *)opts->optv[i].ctx);
     }

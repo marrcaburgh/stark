@@ -10,8 +10,14 @@ int main(int argc, char *argv[]) {
   init_env(true);
 #endif // STARK_CLI_OPTS_ENABLE_ENV
 
-  if (!stark_cli_opts_parse(&cli_opts, argc, argv)) {
-    return 3;
+  switch (stark_cli_opts_parse(&cli_opts, argc, argv)) {
+  case STARK_CLI_OPTS_ERR_FAILURE:
+    return 2;
+
+  case STARK_CLI_OPTS_ERR_EXIT:
+    return 1;
+  default:
+    break;
   }
 
   print_shorthand();
